@@ -1,0 +1,100 @@
+# -------------------------------
+# Laravel / PHP
+# -------------------------------
+/vendor/
+/node_modules/
+/public/build/
+/public/hot
+/storage/*.key
+/storage/pail
+/storage/logs/
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/testing/
+/storage/framework/views/
+/bootstrap/cache/*.php
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# Environment files (confidential)
+.env
+.env.*
+!.env.example
+
+# Secret or key-like files
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.jks
+id_rsa
+id_rsa.pub
+
+# -------------------------------
+# Databases, backups and exports
+# -------------------------------
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.backup
+*.dump
+*.dmp
+*.gz
+*.tar
+*.zip
+
+# -------------------------------
+# Logs
+# -------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -------------------------------
+# Frontend build / caches
+# -------------------------------
+/dist/
+/.vite/
+/.next/
+/.nuxt/
+/.cache/
+coverage/
+
+# -------------------------------
+# Test artifacts
+# -------------------------------
+/.phpunit.cache/
+/.pest/
+
+# -------------------------------
+# IDE / Editor / OS
+# -------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+*.code-workspace
+.DS_Store
+Thumbs.db
+
+# -------------------------------
+# Docker / local infra override files
+# -------------------------------
+.docker/
+.docker-compose.override.yml
+
+# -------------------------------
+# Temporary files
+# -------------------------------
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
