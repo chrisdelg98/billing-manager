@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CostItemController;
+use App\Http\Controllers\CostAllocationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\PaymentController;
@@ -32,7 +33,14 @@ Route::middleware('auth')->group(function () {
         ->parameters(['costos' => 'costItem'])
         ->except(['show']);
 
+    Route::get('/costos/{costItem}/asignaciones', [CostAllocationController::class, 'edit'])
+        ->name('costos.asignaciones.edit');
+
+    Route::put('/costos/{costItem}/asignaciones', [CostAllocationController::class, 'update'])
+        ->name('costos.asignaciones.update');
+
     Route::get('/finanzas', [FinanceController::class, 'index'])->name('finanzas.index');
+    Route::post('/finanzas/snapshots/generar', [FinanceController::class, 'generateSnapshot'])->name('finanzas.snapshots.generate');
 
     Route::get('/usuario/password', [UserPasswordController::class, 'edit'])
         ->name('user.password.edit');

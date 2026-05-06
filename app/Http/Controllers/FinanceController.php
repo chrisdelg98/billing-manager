@@ -3,18 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\CostItem;
+use App\Models\MonthlySnapshot;
 use App\Models\Payment;
 use App\Models\Service;
 use App\Models\Subscription;
+use App\Support\AuditLogger;
+use App\Support\FinanceSnapshotService;
 use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class FinanceController extends Controller
 {
-    public function index(): View
+    public function index(Request $request, FinanceSnapshotService $snapshotService): View
     {
-        $period = request('period', now()->format('Y-m'));
+        $period = (string) $request->input('period', now()->format('Y-m'));
 
         try {
             $periodStart = Carbon::createFromFormat('Y-m', $period)->startOfMonth();
@@ -71,6 +76,14 @@ class FinanceController extends Controller
             ->orderByDesc('amount_total')
             ->get();
 
+        $currentSnapshots = MonthlySnapshot::query()
+            ->with('service:id,name')
+            ->where('period', $period)
+            ->orderByDesc('net_margin')
+            ->get();
+
+        $snapshotHistory = $snapshotService->historicalSummary();
+
         return view('finance.index', compact(
             'period',
             'incomeReal',
@@ -79,7 +92,24 @@ class FinanceController extends Controller
             'netProjected',
             'realVsCost',
             'incomeByService',
-            'costByCategory'
+            'costByCategory',
+            'currentSnapshots',
+            'snapshotHistory'
         ));
+    }
+
+    public function generateSnapshot(Request $request, FinanceSnapshotService $snapshotService): RedirectResponse
+    {
+        $period = (string) $request->input('period', now()->subMonthNoOverflow()->format('Y-m'));
+        $processedServices = $snapshotService->generateForPeriod($period);
+
+        AuditLogger::log('generated', 'monthly_snapshot', null, [
+            'period' => $period,
+            'services_count' => $processedServices,
+        ]);
+
+        return redirect()
+            ->route('finanzas.index', ['period' => $period])
+            ->with('status', "Snapshots generados para {$period}. Servicios procesados: {$processedServices}.");
     }
 }

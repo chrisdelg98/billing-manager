@@ -46,6 +46,9 @@
                                 <td class="px-4 py-3 text-slate-700">{{ $costItem->is_active ? 'Activo' : 'Inactivo' }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-end gap-2">
+                                        @if ($costItem->cost_type === 'shared')
+                                            <a href="{{ route('costos.asignaciones.edit', $costItem) }}" class="ui-btn rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50">Asignar</a>
+                                        @endif
                                         <a href="{{ route('costos.edit', $costItem) }}" class="ui-btn rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">Editar</a>
                                         <form method="POST" action="{{ route('costos.destroy', $costItem) }}" onsubmit="return confirm('Se eliminara el costo. Continuar?')">
                                             @csrf
