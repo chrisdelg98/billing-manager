@@ -1,4 +1,8 @@
 <style>
+    [x-cloak] {
+        display: none !important;
+    }
+
     :root {
         --ui-radius-control: 7px;
     }

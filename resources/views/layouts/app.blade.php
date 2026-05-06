@@ -21,17 +21,51 @@
 
         @include('layouts.partials.design-tokens')
     </head>
-    <body class="font-sans antialiased bg-slate-100 text-slate-900">
-        <div class="min-h-screen flex flex-col md:flex-row">
-            <aside class="w-full border-b border-slate-200 bg-white md:min-h-screen md:w-72 md:border-b-0 md:border-r">
+    <body class="font-sans antialiased bg-slate-100 text-slate-900"
+          x-data="{ sidebarExpanded: JSON.parse(localStorage.getItem('sidebar-expanded') ?? 'true'), mobileSidebarOpen: false }"
+          x-init="$watch('sidebarExpanded', value => localStorage.setItem('sidebar-expanded', JSON.stringify(value)))">
+        <div class="min-h-screen md:flex">
+            <div x-cloak x-show="mobileSidebarOpen" class="fixed inset-0 z-30 bg-slate-900/40 md:hidden" @click="mobileSidebarOpen = false"></div>
+
+            <aside
+                class="fixed inset-y-0 left-0 z-40 w-72 transform border-r border-slate-200 bg-white transition-all duration-200 ease-out md:static md:translate-x-0"
+                :class="[
+                    mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+                    sidebarExpanded ? 'md:w-72' : 'md:w-20'
+                ]"
+            >
                 @include('layouts.navigation')
             </aside>
 
-            <div class="flex-1">
+            <div class="flex min-w-0 flex-1 flex-col">
+                <div class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2 text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                        @click="mobileSidebarOpen = true"
+                        aria-label="Abrir menu"
+                    >
+                        <x-heroicon-o-bars-3 class="h-5 w-5" />
+                    </button>
+                    <p class="text-sm font-semibold text-slate-900">{{ config('app.name', 'BillingManager') }}</p>
+                </div>
+
                 @isset($header)
                     <header class="border-b border-slate-200 bg-white/90 backdrop-blur">
-                        <div class="px-4 py-5 sm:px-6 lg:px-8">
-                            {{ $header }}
+                        <div class="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
+                            <button
+                                type="button"
+                                class="hidden items-center justify-center rounded-lg border border-slate-300 p-2 text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200 md:inline-flex"
+                                :aria-label="sidebarExpanded ? 'Colapsar menu' : 'Expandir menu'"
+                                @click="sidebarExpanded = !sidebarExpanded"
+                            >
+                                <x-heroicon-o-chevron-double-left x-show="sidebarExpanded" class="h-4 w-4" />
+                                <x-heroicon-o-chevron-double-right x-show="! sidebarExpanded" x-cloak class="h-4 w-4" />
+                            </button>
+
+                            <div class="min-w-0">
+                                {{ $header }}
+                            </div>
                         </div>
                     </header>
                 @endisset
