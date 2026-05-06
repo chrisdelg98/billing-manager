@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ServiceCatalogOption;
 use App\Models\Service;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class ServiceController extends Controller
@@ -30,7 +32,7 @@ class ServiceController extends Controller
 
     public function create(): View
     {
-        return view('services.create');
+        return view('services.create', $this->catalogOptions());
     }
 
     public function store(Request $request): RedirectResponse
@@ -43,7 +45,7 @@ class ServiceController extends Controller
 
     public function edit(Service $service): View
     {
-        return view('services.edit', compact('service'));
+        return view('services.edit', array_merge(compact('service'), $this->catalogOptions()));
     }
 
     public function update(Request $request, Service $service): RedirectResponse
@@ -81,5 +83,23 @@ class ServiceController extends Controller
             'owner_name' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string'],
         ]);
+    }
+
+    private function catalogOptions(): array
+    {
+        return [
+            'typeOptions' => $this->activeCatalogNames(ServiceCatalogOption::TYPE_SERVICE),
+            'providerOptions' => $this->activeCatalogNames(ServiceCatalogOption::TYPE_PROVIDER),
+        ];
+    }
+
+    private function activeCatalogNames(string $catalogType): Collection
+    {
+        return ServiceCatalogOption::query()
+            ->ofType($catalogType)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name');
     }
 }

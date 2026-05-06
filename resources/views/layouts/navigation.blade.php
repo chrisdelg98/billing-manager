@@ -94,6 +94,16 @@
                 <x-heroicon-o-chart-bar-square class="h-5 w-5 shrink-0" />
                 <span x-show="sidebarExpanded || mobileSidebarOpen" x-transition.opacity>Finanzas</span>
             </a>
+
+            <a
+                href="{{ route('catalogos.servicios.index') }}"
+                title="Catalogos"
+                class="ui-btn flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition {{ request()->routeIs('catalogos.*') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' }}"
+                :class="sidebarExpanded || mobileSidebarOpen ? 'justify-start' : 'justify-center'"
+            >
+                <x-heroicon-o-rectangle-stack class="h-5 w-5 shrink-0" />
+                <span x-show="sidebarExpanded || mobileSidebarOpen" x-transition.opacity>Catalogos</span>
+            </a>
         </div>
     </div>
 

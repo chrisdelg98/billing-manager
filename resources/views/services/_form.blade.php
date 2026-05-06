@@ -9,14 +9,28 @@
 
     <div>
         <label for="type" class="mb-1 block text-sm font-medium text-slate-700">Tipo</label>
-        <input id="type" name="type" type="text" value="{{ old('type', $service->type ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <input id="type" name="type" type="text" list="service_type_options" value="{{ old('type', $service->type ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <datalist id="service_type_options">
+            @foreach(($typeOptions ?? collect()) as $option)
+                <option value="{{ $option }}"></option>
+            @endforeach
+        </datalist>
         @error('type')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
     <div>
         <label for="provider" class="mb-1 block text-sm font-medium text-slate-700">Proveedor</label>
-        <input id="provider" name="provider" type="text" value="{{ old('provider', $service->provider ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <input id="provider" name="provider" type="text" list="provider_options" value="{{ old('provider', $service->provider ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <datalist id="provider_options">
+            @foreach(($providerOptions ?? collect()) as $option)
+                <option value="{{ $option }}"></option>
+            @endforeach
+        </datalist>
         @error('provider')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+        <p class="mt-1 text-xs text-slate-500">
+            Gestiona listas de tipos y proveedores en
+            <a href="{{ route('catalogos.servicios.index') }}" class="font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-900">Catalogos de servicios</a>.
+        </p>
     </div>
 
     <div>

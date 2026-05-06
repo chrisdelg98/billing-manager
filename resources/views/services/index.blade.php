@@ -10,9 +10,15 @@
                 <button type="submit" class="ui-btn rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Buscar</button>
             </form>
 
-            <a href="{{ route('servicios.create') }}" class="ui-btn inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
-                Nuevo servicio
-            </a>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('catalogos.servicios.index') }}" class="ui-btn inline-flex items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                    Gestionar listas
+                </a>
+
+                <a href="{{ route('servicios.create') }}" class="ui-btn inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+                    Nuevo servicio
+                </a>
+            </div>
         </div>
 
         @if (session('status'))

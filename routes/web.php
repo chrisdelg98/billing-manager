@@ -5,6 +5,7 @@ use App\Http\Controllers\CostAllocationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\UserPasswordController;
@@ -20,6 +21,18 @@ Route::middleware('auth')->group(function () {
     Route::resource('servicios', ServiceController::class)
         ->parameters(['servicios' => 'service'])
         ->except(['show']);
+
+    Route::get('/catalogos/servicios', [ServiceCatalogController::class, 'index'])
+        ->name('catalogos.servicios.index');
+
+    Route::post('/catalogos/servicios', [ServiceCatalogController::class, 'store'])
+        ->name('catalogos.servicios.store');
+
+    Route::put('/catalogos/servicios/{catalogoServicio}', [ServiceCatalogController::class, 'update'])
+        ->name('catalogos.servicios.update');
+
+    Route::delete('/catalogos/servicios/{catalogoServicio}', [ServiceCatalogController::class, 'destroy'])
+        ->name('catalogos.servicios.destroy');
 
     Route::resource('suscripciones', SubscriptionController::class)
         ->parameters(['suscripciones' => 'subscription'])
