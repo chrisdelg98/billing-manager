@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Service;
+use App\Support\AuditLogger;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class ServiceController extends Controller
+{
+    public function index(Request $request): View
+    {
+        $query = Service::query()->latest();
+
+        if ($request->filled('q')) {
+            $search = trim((string) $request->string('q'));
+            $query->where(function ($builder) use ($search): void {
+                $builder->where('name', 'like', "%{$search}%")
+                    ->orWhere('provider', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%");
+            });
+        }
+
+        $services = $query->paginate(10)->withQueryString();
+
+        return view('services.index', compact('services'));
+    }
+
+    public function create(): View
+    {
+        return view('services.create');
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $service = Service::query()->create($this->validatedData($request));
+        AuditLogger::log('created', 'service', $service->id, ['name' => $service->name]);
+
+        return redirect()->route('servicios.index')->with('status', 'Servicio creado correctamente.');
+    }
+
+    public function edit(Service $service): View
+    {
+        return view('services.edit', compact('service'));
+    }
+
+    public function update(Request $request, Service $service): RedirectResponse
+    {
+        $service->update($this->validatedData($request));
+        AuditLogger::log('updated', 'service', $service->id, ['name' => $service->name]);
+
+        return redirect()->route('servicios.index')->with('status', 'Servicio actualizado correctamente.');
+    }
+
+    public function destroy(Service $service): RedirectResponse
+    {
+        if ($service->subscriptions()->exists() || $service->payments()->exists()) {
+            return redirect()->route('servicios.index')->withErrors([
+                'delete' => 'No puedes eliminar un servicio con suscripciones o pagos asociados.',
+            ]);
+        }
+
+        $name = $service->name;
+        $id = $service->id;
+        $service->delete();
+
+        AuditLogger::log('deleted', 'service', $id, ['name' => $name]);
+
+        return redirect()->route('servicios.index')->with('status', 'Servicio eliminado correctamente.');
+    }
+
+    private function validatedData(Request $request): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'type' => ['nullable', 'string', 'max:80'],
+            'provider' => ['nullable', 'string', 'max:120'],
+            'status' => ['required', 'in:active,paused,archived'],
+            'owner_name' => ['nullable', 'string', 'max:120'],
+            'notes' => ['nullable', 'string'],
+        ]);
+    }
+}
