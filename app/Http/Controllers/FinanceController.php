@@ -37,6 +37,10 @@ class FinanceController extends Controller
             ->where('is_active', true)
             ->get()
             ->sum(function (Subscription $subscription) {
+                if ($subscription->isInTrial()) {
+                    return 0;
+                }
+
                 return match ($subscription->billing_cycle) {
                     'yearly' => (float) $subscription->amount / 12,
                     default => (float) $subscription->amount,

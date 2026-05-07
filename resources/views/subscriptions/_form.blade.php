@@ -3,6 +3,9 @@
 @php
     $billingCycle = old('billing_cycle', $subscription->billing_cycle ?? 'monthly');
     $seedAmount = (float) old('amount', $subscription->amount ?? 0);
+    $seedTrialEndsAt = old('trial_ends_at', isset($subscription) && $subscription->trial_ends_at ? $subscription->trial_ends_at->toDateString() : '');
+    $seedHasTrialRaw = old('has_trial', isset($subscription) && $subscription->has_trial ? '1' : '0');
+    $seedHasTrial = (string) $seedHasTrialRaw === '1' || (is_string($seedTrialEndsAt) && $seedTrialEndsAt !== '');
     $seedMonthlyReference = match ($billingCycle) {
         'yearly' => $seedAmount / 12,
         'monthly' => $seedAmount,
@@ -15,6 +18,8 @@
     x-data="{
         billingCycle: @js((string) $billingCycle),
         amount: Number(@js($seedAmount)),
+        hasTrial: @js((bool) $seedHasTrial),
+        trialEndsAt: @js((string) $seedTrialEndsAt),
         calcOpen: false,
         monthlyReference: Number(@js(round($seedMonthlyReference, 2))),
         discountPercent: Number(0),
@@ -134,6 +139,34 @@
         <label for="next_renewal_at" class="mb-1 block text-sm font-medium text-slate-700">Proxima renovacion</label>
         <input id="next_renewal_at" name="next_renewal_at" type="date" value="{{ old('next_renewal_at', isset($subscription) && $subscription->next_renewal_at ? $subscription->next_renewal_at->toDateString() : '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
         @error('next_renewal_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
+    <div class="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+                type="checkbox"
+                name="has_trial"
+                value="1"
+                x-model="hasTrial"
+                x-on:change="if (!hasTrial) { trialEndsAt = '' }"
+                class="rounded border-slate-300 text-slate-900 focus:ring-slate-300"
+            >
+            Tiene periodo de prueba (opcional)
+        </label>
+        <p class="mt-1 text-xs text-slate-500">Si esta activo, la suscripcion no cuenta como ingreso recurrente hasta finalizar la prueba.</p>
+
+        <div class="mt-3" x-show="hasTrial" x-cloak>
+            <label for="trial_ends_at" class="mb-1 block text-sm font-medium text-slate-700">Periodo de prueba hasta</label>
+            <input
+                id="trial_ends_at"
+                name="trial_ends_at"
+                type="date"
+                x-model="trialEndsAt"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200"
+            >
+            <p class="mt-1 text-xs text-slate-500">Al vencer esta fecha, la suscripcion pasa automaticamente a estado normal y se conserva el historico de prueba.</p>
+        </div>
+        @error('trial_ends_at')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
     <div class="sm:col-span-2">

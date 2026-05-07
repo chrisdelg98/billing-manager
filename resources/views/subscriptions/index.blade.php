@@ -53,7 +53,19 @@
                                 <td class="px-4 py-3 text-slate-700">{{ ucfirst($subscription->billing_cycle) }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ number_format((float) $subscription->amount, 2) }} {{ $subscription->currency }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $subscription->next_renewal_at?->format('Y-m-d') ?: '-' }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $subscription->is_active ? 'Activa' : 'Inactiva' }}</td>
+                                <td class="px-4 py-3 text-slate-700">
+                                    @if (! $subscription->is_active)
+                                        Inactiva
+                                    @elseif ($subscription->isInTrial())
+                                        En prueba
+                                    @else
+                                        Activa
+                                    @endif
+
+                                    @if ($subscription->has_trial)
+                                        <p class="mt-1 text-xs text-slate-500">{{ $subscription->trialStatusLabel() }}</p>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-end gap-2">
                                         <a href="{{ route('pagos.create', ['service_id' => $subscription->service_id, 'subscription_id' => $subscription->id]) }}" class="ui-btn rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50">Generar pago</a>

@@ -187,4 +187,59 @@ class SubscriptionPaymentsFlowTest extends TestCase
 
         $this->assertEquals('2027-06-30', $subscription->fresh()->next_renewal_at?->toDateString());
     }
+
+    public function test_subscription_can_store_optional_trial_period(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $trialEnd = now()->addDays(14)->toDateString();
+
+        $this->actingAs($user)
+            ->post(route('suscripciones.store'), [
+                'service_id' => $service->id,
+                'name' => 'CLINEXUS CORE - PRUEBA',
+                'billing_cycle' => 'monthly',
+                'amount' => 25,
+                'currency' => 'USD',
+                'has_trial' => 1,
+                'trial_ends_at' => $trialEnd,
+                'is_active' => 1,
+            ])
+            ->assertRedirect(route('suscripciones.index'));
+
+        $this->assertDatabaseHas('subscriptions', [
+            'name' => 'CLINEXUS CORE - PRUEBA',
+            'has_trial' => 1,
+        ]);
+
+        $created = Subscription::query()->where('name', 'CLINEXUS CORE - PRUEBA')->firstOrFail();
+        $this->assertSame($trialEnd, $created->trial_ends_at?->toDateString());
+    }
+
+    public function test_subscription_keeps_trial_history_after_trial_end(): void
+    {
+        $subscription = Subscription::query()->create([
+            'service_id' => Service::query()->create([
+                'name' => 'CLINEXUS',
+                'status' => 'active',
+            ])->id,
+            'name' => 'CLINEXUS CORE - HISTORICO PRUEBA',
+            'billing_cycle' => 'monthly',
+            'amount' => 25,
+            'currency' => 'USD',
+            'has_trial' => true,
+            'trial_ends_at' => now()->subDay()->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $fresh = $subscription->fresh();
+
+        $this->assertTrue((bool) $fresh?->has_trial);
+        $this->assertFalse($fresh?->isInTrial());
+    }
 }

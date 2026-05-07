@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CostItem;
 use App\Models\Payment;
 use App\Models\Service;
+use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -150,5 +151,41 @@ class FinanceSnapshotsTest extends TestCase
             ->assertOk()
             ->assertSee('8.33 USD')
             ->assertDontSee('400.00 USD');
+    }
+
+    public function test_finance_projection_excludes_active_subscriptions_still_in_trial(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'Plan normal',
+            'billing_cycle' => 'monthly',
+            'amount' => 20,
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+
+        Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'Plan en prueba',
+            'billing_cycle' => 'monthly',
+            'amount' => 30,
+            'currency' => 'USD',
+            'has_trial' => true,
+            'trial_ends_at' => now()->addDays(10)->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('finanzas.index', ['period' => now()->format('Y-m')]))
+            ->assertOk()
+            ->assertSee('20.00 USD')
+            ->assertDontSee('50.00 USD');
     }
 }

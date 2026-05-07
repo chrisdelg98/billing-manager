@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Service;
 use App\Models\Subscription;
 use App\Support\AuditLogger;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SubscriptionController extends Controller
@@ -96,10 +98,39 @@ class SubscriptionController extends Controller
             'currency' => ['required', 'string', 'size:3'],
             'next_renewal_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'has_trial' => ['nullable', 'boolean'],
+            'trial_ends_at' => ['nullable', 'date'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['currency'] = strtoupper((string) $data['currency']);
+        $data['has_trial'] = (bool) ($data['has_trial'] ?? false);
+
+        if (! empty($data['trial_ends_at'])) {
+            $data['has_trial'] = true;
+        }
+
+        if ($data['has_trial'] && empty($data['trial_ends_at'])) {
+            throw ValidationException::withMessages([
+                'trial_ends_at' => 'Indica hasta cuando llega el periodo de prueba.',
+            ]);
+        }
+
+        if ($data['has_trial']) {
+            $trialEnd = Carbon::parse((string) $data['trial_ends_at'])->toDateString();
+            $nextRenewal = ! empty($data['next_renewal_at'])
+                ? Carbon::parse((string) $data['next_renewal_at'])->toDateString()
+                : null;
+
+            if (! $nextRenewal || $nextRenewal < $trialEnd) {
+                $data['next_renewal_at'] = $trialEnd;
+            }
+        }
+
+        if (! $data['has_trial']) {
+            $data['trial_ends_at'] = null;
+        }
+
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
 
         return $data;
