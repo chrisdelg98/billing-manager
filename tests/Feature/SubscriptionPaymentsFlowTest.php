@@ -113,4 +113,78 @@ class SubscriptionPaymentsFlowTest extends TestCase
         $this->assertEquals('85.00', (string) $payment->amount);
         $this->assertStringContainsString('Descuento aplicado', (string) $payment->notes);
     }
+
+    public function test_payment_store_advances_monthly_subscription_next_renewal(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE',
+            'billing_cycle' => 'monthly',
+            'amount' => 25,
+            'currency' => 'USD',
+            'next_renewal_at' => '2026-06-30',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('pagos.store'), [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+                'paid_at' => '2026-06-30',
+                'base_amount' => 25,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'amount' => 25,
+                'currency' => 'USD',
+                'method' => 'transfer',
+                'reference' => 'RNW-MTH-001',
+            ])
+            ->assertRedirect(route('pagos.index'));
+
+        $this->assertEquals('2026-07-30', $subscription->fresh()->next_renewal_at?->toDateString());
+    }
+
+    public function test_payment_store_advances_yearly_subscription_next_renewal(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE ANUAL',
+            'billing_cycle' => 'yearly',
+            'amount' => 200,
+            'currency' => 'USD',
+            'next_renewal_at' => '2026-06-30',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('pagos.store'), [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+                'paid_at' => '2026-06-30',
+                'base_amount' => 200,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'amount' => 200,
+                'currency' => 'USD',
+                'method' => 'transfer',
+                'reference' => 'RNW-YR-001',
+            ])
+            ->assertRedirect(route('pagos.index'));
+
+        $this->assertEquals('2027-06-30', $subscription->fresh()->next_renewal_at?->toDateString());
+    }
 }

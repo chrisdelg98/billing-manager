@@ -30,7 +30,7 @@ class PaymentController extends Controller
     public function create(Request $request): View
     {
         $services = Service::query()->orderBy('name')->get(['id', 'name']);
-        $subscriptions = Subscription::query()->orderBy('name')->get(['id', 'name', 'service_id', 'amount', 'currency']);
+        $subscriptions = Subscription::query()->orderBy('name')->get(['id', 'name', 'service_id', 'amount', 'currency', 'notes']);
 
         $defaultSubscription = null;
 
@@ -43,6 +43,7 @@ class PaymentController extends Controller
         $defaultBaseAmount = $defaultSubscription ? (float) $defaultSubscription->amount : null;
         $defaultAmount = $defaultSubscription ? (float) $defaultSubscription->amount : null;
         $defaultCurrency = $defaultSubscription ? (string) $defaultSubscription->currency : 'USD';
+        $defaultNotes = $defaultSubscription ? (string) ($defaultSubscription->notes ?? '') : '';
 
         return view('payments.create', compact(
             'services',
@@ -52,6 +53,7 @@ class PaymentController extends Controller
             'defaultBaseAmount',
             'defaultAmount',
             'defaultCurrency',
+            'defaultNotes',
         ));
     }
 
@@ -59,6 +61,8 @@ class PaymentController extends Controller
     {
         $data = $this->validatedData($request);
         $payment = Payment::query()->create($data);
+
+        $this->advanceSubscriptionRenewal($payment);
 
         AuditLogger::log('created', 'payment', $payment->id, ['amount' => $payment->amount]);
 
@@ -154,5 +158,43 @@ class PaymentController extends Controller
         unset($data['base_amount'], $data['discount_percent'], $data['discount_amount']);
 
         return $data;
+    }
+
+    private function advanceSubscriptionRenewal(Payment $payment): void
+    {
+        if (! $payment->subscription_id) {
+            return;
+        }
+
+        $subscription = Subscription::query()->find($payment->subscription_id);
+
+        if (! $subscription || ! $subscription->is_active) {
+            return;
+        }
+
+        if (! in_array($subscription->billing_cycle, ['monthly', 'yearly'], true)) {
+            return;
+        }
+
+        $paymentDate = $payment->paid_at->copy()->startOfDay();
+        $nextRenewal = $subscription->next_renewal_at
+            ? $subscription->next_renewal_at->copy()->startOfDay()
+            : $paymentDate->copy();
+
+        if ($nextRenewal->gt($paymentDate)) {
+            $nextRenewal = $subscription->billing_cycle === 'yearly'
+                ? $nextRenewal->addYearNoOverflow()
+                : $nextRenewal->addMonthNoOverflow();
+        } else {
+            do {
+                $nextRenewal = $subscription->billing_cycle === 'yearly'
+                    ? $nextRenewal->addYearNoOverflow()
+                    : $nextRenewal->addMonthNoOverflow();
+            } while ($nextRenewal->lte($paymentDate));
+        }
+
+        $subscription->update([
+            'next_renewal_at' => $nextRenewal->toDateString(),
+        ]);
     }
 }

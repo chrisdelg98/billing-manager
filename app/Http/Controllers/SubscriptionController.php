@@ -95,6 +95,7 @@ class SubscriptionController extends Controller
             'amount' => ['required', 'numeric', 'min:0'],
             'currency' => ['required', 'string', 'size:3'],
             'next_renewal_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:1000'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 

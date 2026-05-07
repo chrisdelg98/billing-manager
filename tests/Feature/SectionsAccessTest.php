@@ -46,6 +46,7 @@ class SectionsAccessTest extends TestCase
             'amount' => 50,
             'currency' => 'USD',
             'next_renewal_at' => now()->addMonth()->toDateString(),
+            'notes' => 'Mes de prueba con descuento del 20%',
             'is_active' => 1,
         ])->assertRedirect(route('suscripciones.index'));
 
@@ -75,6 +76,10 @@ class SectionsAccessTest extends TestCase
 
         $this->assertDatabaseCount('services', 1);
         $this->assertDatabaseCount('subscriptions', 1);
+        $this->assertDatabaseHas('subscriptions', [
+            'name' => 'Plan mensual',
+            'notes' => 'Mes de prueba con descuento del 20%',
+        ]);
         $this->assertDatabaseCount('payments', 1);
         $this->assertDatabaseCount('cost_items', 1);
         $this->assertDatabaseCount('audit_logs', 4);

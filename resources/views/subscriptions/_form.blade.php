@@ -137,6 +137,13 @@
     </div>
 
     <div class="sm:col-span-2">
+        <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notas</label>
+        <textarea id="notes" name="notes" rows="3" maxlength="1000" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200" placeholder="Ejemplo: Mes de prueba / Descuento 20% por onboarding">{{ old('notes', $subscription->notes ?? '') }}</textarea>
+        <p class="mt-1 text-xs text-slate-500">Guarda aqui acuerdos comerciales para reutilizarlos al momento de cobrar.</p>
+        @error('notes')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
+    <div class="sm:col-span-2">
         @php($active = (bool) old('is_active', $subscription->is_active ?? true))
         <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
             <input type="checkbox" name="is_active" value="1" @checked($active) class="rounded border-slate-300 text-slate-900 focus:ring-slate-300">

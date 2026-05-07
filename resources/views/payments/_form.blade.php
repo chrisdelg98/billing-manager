@@ -209,7 +209,7 @@
 
     <div class="sm:col-span-2">
         <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notas</label>
-        <textarea id="notes" name="notes" rows="4" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">{{ old('notes', $payment->notes ?? '') }}</textarea>
+        <textarea id="notes" name="notes" rows="4" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">{{ old('notes', $payment->notes ?? ($defaultNotes ?? '')) }}</textarea>
         @error('notes')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 </div>

@@ -15,6 +15,7 @@ class Subscription extends Model
         'amount',
         'currency',
         'next_renewal_at',
+        'notes',
         'is_active',
     ];
 
