@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\CostItem;
+use App\Models\ServiceCatalogOption;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -27,7 +30,9 @@ class CostItemController extends Controller
 
     public function create(): View
     {
-        return view('costs.create');
+        $currencyOptions = $this->activeCurrencyOptions();
+
+        return view('costs.create', compact('currencyOptions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -40,7 +45,9 @@ class CostItemController extends Controller
 
     public function edit(CostItem $costItem): View
     {
-        return view('costs.edit', compact('costItem'));
+        $currencyOptions = $this->activeCurrencyOptions();
+
+        return view('costs.edit', compact('costItem', 'currencyOptions'));
     }
 
     public function update(Request $request, CostItem $costItem): RedirectResponse
@@ -64,12 +71,23 @@ class CostItemController extends Controller
 
     private function validatedData(Request $request): array
     {
+        $request->merge([
+            'currency' => strtoupper((string) $request->input('currency', '')),
+        ]);
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'category' => ['required', 'in:hosting,license,infra,other'],
             'cost_type' => ['required', 'in:direct,shared'],
             'amount' => ['required', 'numeric', 'min:0'],
-            'currency' => ['required', 'string', 'size:3'],
+            'currency' => [
+                'required',
+                'string',
+                'size:3',
+                Rule::exists('service_catalog_options', 'name')->where(fn ($query) => $query
+                    ->where('catalog_type', ServiceCatalogOption::TYPE_CURRENCY)
+                    ->where('is_active', true)),
+            ],
             'billing_cycle' => ['required', 'in:monthly,yearly,custom'],
             'billing_interval_months' => ['nullable', 'integer', 'min:1', 'max:600'],
             'billing_custom_every' => ['nullable', 'integer', 'min:1', 'max:120'],
@@ -113,5 +131,15 @@ class CostItemController extends Controller
         }
 
         return $intervalMonths;
+    }
+
+    private function activeCurrencyOptions(): Collection
+    {
+        return ServiceCatalogOption::query()
+            ->ofType(ServiceCatalogOption::TYPE_CURRENCY)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name');
     }
 }

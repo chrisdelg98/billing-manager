@@ -27,7 +27,13 @@ class ServiceCatalogController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('catalogs.services', compact('typeOptions', 'providerOptions'));
+        $currencyOptions = ServiceCatalogOption::query()
+            ->ofType(ServiceCatalogOption::TYPE_CURRENCY)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        return view('catalogs.services', compact('typeOptions', 'providerOptions', 'currencyOptions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -79,7 +85,7 @@ class ServiceCatalogController extends Controller
     public function reorder(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'catalog_type' => ['required', 'in:'.ServiceCatalogOption::TYPE_SERVICE.','.ServiceCatalogOption::TYPE_PROVIDER],
+            'catalog_type' => ['required', 'in:'.implode(',', $this->allowedCatalogTypes())],
             'ordered_ids' => ['required', 'array', 'min:1'],
             'ordered_ids.*' => ['required', 'integer', 'distinct'],
         ]);
@@ -125,18 +131,43 @@ class ServiceCatalogController extends Controller
     private function validatedData(Request $request, ?string $forceCatalogType = null): array
     {
         $data = $request->validate([
-            'catalog_type' => ['nullable', 'in:'.ServiceCatalogOption::TYPE_SERVICE.','.ServiceCatalogOption::TYPE_PROVIDER],
+            'catalog_type' => ['nullable', 'in:'.implode(',', $this->allowedCatalogTypes())],
             'name' => ['required', 'string', 'max:120'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['catalog_type'] = $forceCatalogType ?? (string) ($data['catalog_type'] ?? '');
-        $data['name'] = trim((string) $data['name']);
+
+        $name = trim((string) $data['name']);
+
+        if ($data['catalog_type'] === ServiceCatalogOption::TYPE_CURRENCY) {
+            $name = strtoupper($name);
+
+            if (! preg_match('/^[A-Z]{3}$/', $name)) {
+                throw ValidationException::withMessages([
+                    'name' => 'La moneda debe ser un codigo ISO de 3 letras (ej: USD, EUR, DOP).',
+                ]);
+            }
+        }
+
+        $data['name'] = $name;
         $data['sort_order'] = (int) ($data['sort_order'] ?? 0);
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
 
         return $data;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function allowedCatalogTypes(): array
+    {
+        return [
+            ServiceCatalogOption::TYPE_SERVICE,
+            ServiceCatalogOption::TYPE_PROVIDER,
+            ServiceCatalogOption::TYPE_CURRENCY,
+        ];
     }
 
     private function ensureUniqueName(string $catalogType, string $name, ?int $ignoreId = null): void

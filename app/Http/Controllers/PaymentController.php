@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Payment;
 use App\Models\Service;
+use App\Models\ServiceCatalogOption;
 use App\Models\Subscription;
 use App\Support\AuditLogger;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -52,6 +55,7 @@ class PaymentController extends Controller
         $defaultAmount = $defaultSubscription ? (float) $defaultSubscription->amount : null;
         $defaultCurrency = $defaultSubscription ? (string) $defaultSubscription->currency : 'USD';
         $defaultNotes = $defaultSubscription ? (string) ($defaultSubscription->notes ?? '') : '';
+        $currencyOptions = $this->activeCurrencyOptions();
 
         return view('payments.create', compact(
             'services',
@@ -62,6 +66,7 @@ class PaymentController extends Controller
             'defaultAmount',
             'defaultCurrency',
             'defaultNotes',
+            'currencyOptions',
         ));
     }
 
@@ -89,8 +94,9 @@ class PaymentController extends Controller
             'notes',
         ]);
         $defaultNotes = (string) ($payment->notes ?? '');
+        $currencyOptions = $this->activeCurrencyOptions();
 
-        return view('payments.edit', compact('payment', 'services', 'subscriptions', 'defaultNotes'));
+        return view('payments.edit', compact('payment', 'services', 'subscriptions', 'defaultNotes', 'currencyOptions'));
     }
 
     public function update(Request $request, Payment $payment): RedirectResponse
@@ -116,6 +122,10 @@ class PaymentController extends Controller
 
     private function validatedData(Request $request): array
     {
+        $request->merge([
+            'currency' => strtoupper((string) $request->input('currency', '')),
+        ]);
+
         $data = $request->validate([
             'service_id' => ['required', 'exists:services,id'],
             'subscription_id' => ['nullable', 'exists:subscriptions,id'],
@@ -124,7 +134,14 @@ class PaymentController extends Controller
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'amount' => ['required', 'numeric', 'min:0'],
-            'currency' => ['required', 'string', 'size:3'],
+            'currency' => [
+                'required',
+                'string',
+                'size:3',
+                Rule::exists('service_catalog_options', 'name')->where(fn ($query) => $query
+                    ->where('catalog_type', ServiceCatalogOption::TYPE_CURRENCY)
+                    ->where('is_active', true)),
+            ],
             'method' => ['required', 'in:transfer,cash,other'],
             'reference' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string'],
@@ -219,5 +236,15 @@ class PaymentController extends Controller
         $subscription->update([
             'next_renewal_at' => $nextRenewal->toDateString(),
         ]);
+    }
+
+    private function activeCurrencyOptions(): Collection
+    {
+        return ServiceCatalogOption::query()
+            ->ofType(ServiceCatalogOption::TYPE_CURRENCY)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name');
     }
 }

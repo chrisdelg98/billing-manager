@@ -17,7 +17,9 @@ class ServiceCatalogsTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('catalogos.servicios.index'))
-            ->assertOk();
+            ->assertOk()
+            ->assertSee('Monedas')
+            ->assertSee('USD');
     }
 
     public function test_user_can_add_service_type_catalog_option(): void
@@ -35,6 +37,25 @@ class ServiceCatalogsTest extends TestCase
             'catalog_type' => ServiceCatalogOption::TYPE_SERVICE,
             'name' => 'Monitorizacion',
             'sort_order' => 220,
+            'is_active' => 1,
+        ]);
+    }
+
+    public function test_user_can_add_currency_catalog_option(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('catalogos.servicios.store'), [
+            'catalog_type' => ServiceCatalogOption::TYPE_CURRENCY,
+            'name' => 'cop',
+            'sort_order' => 230,
+            'is_active' => 1,
+        ])->assertRedirect(route('catalogos.servicios.index'));
+
+        $this->assertDatabaseHas('service_catalog_options', [
+            'catalog_type' => ServiceCatalogOption::TYPE_CURRENCY,
+            'name' => 'COP',
+            'sort_order' => 230,
             'is_active' => 1,
         ]);
     }

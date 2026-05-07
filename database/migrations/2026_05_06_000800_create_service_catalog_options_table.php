@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('service_catalog_options', function (Blueprint $table) {
             $table->id();
-            $table->enum('catalog_type', ['service_type', 'provider']);
+            $table->enum('catalog_type', ['service_type', 'provider', 'currency']);
             $table->string('name', 120);
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
@@ -57,6 +57,11 @@ return new class extends Migration
             ['catalog_type' => 'provider', 'name' => 'Netlify', 'sort_order' => 150, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['catalog_type' => 'provider', 'name' => 'PayPal', 'sort_order' => 160, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['catalog_type' => 'provider', 'name' => 'Stripe', 'sort_order' => 170, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+
+            ['catalog_type' => 'currency', 'name' => 'USD', 'sort_order' => 10, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['catalog_type' => 'currency', 'name' => 'EUR', 'sort_order' => 20, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['catalog_type' => 'currency', 'name' => 'DOP', 'sort_order' => 30, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['catalog_type' => 'currency', 'name' => 'MXN', 'sort_order' => 40, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
         ]);
     }
 

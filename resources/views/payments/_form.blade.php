@@ -28,6 +28,16 @@
     $seedAmount = old('amount', $payment->amount ?? ($defaultAmount ?? $seedBaseAmount ?? ''));
     $seedDiscountPercent = old('discount_percent', '');
     $seedDiscountAmount = old('discount_amount', '');
+    $currencyOptions = collect($currencyOptions ?? ['USD'])
+        ->map(fn ($code) => strtoupper((string) $code))
+        ->filter(fn ($code) => $code !== '')
+        ->values();
+
+    if (! $currencyOptions->contains(strtoupper((string) $seedCurrency))) {
+        $currencyOptions->push(strtoupper((string) $seedCurrency));
+    }
+
+    $currencyOptions = $currencyOptions->unique()->values();
 @endphp
 
 <div
@@ -188,7 +198,11 @@
 
     <div>
         <label for="currency" class="mb-1 block text-sm font-medium text-slate-700">Moneda</label>
-        <input id="currency" name="currency" type="text" maxlength="3" x-model="currency" required class="w-full rounded-lg border border-slate-300 px-3 py-2 uppercase text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <select id="currency" name="currency" x-model="currency" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+            @foreach($currencyOptions as $currencyOption)
+                <option value="{{ $currencyOption }}">{{ $currencyOption }}</option>
+            @endforeach
+        </select>
         @error('currency')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
@@ -203,7 +217,7 @@
         @error('method')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
-    <div class="sm:col-span-2">
+    <div class="">
         <label for="reference" class="mb-1 block text-sm font-medium text-slate-700">Referencia</label>
         <input id="reference" name="reference" type="text" value="{{ old('reference', $payment->reference ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
         @error('reference')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror

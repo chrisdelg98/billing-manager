@@ -9,6 +9,7 @@ class ServiceCatalogOption extends Model
 {
     public const TYPE_SERVICE = 'service_type';
     public const TYPE_PROVIDER = 'provider';
+    public const TYPE_CURRENCY = 'currency';
 
     protected $fillable = [
         'catalog_type',

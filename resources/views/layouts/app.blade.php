@@ -72,7 +72,7 @@
                 'title' => 'Como usar Catalogos',
                 'summary' => 'Centraliza listas reutilizables para mantener datos consistentes.',
                 'points' => [
-                    'Agrega tipos y proveedores que uses frecuentemente.',
+                    'Agrega tipos, proveedores y monedas que uses frecuentemente.',
                     'Reordena con drag and drop para priorizar opciones.',
                     'Activa/Inactiva para controlar que aparece en formularios.',
                 ],

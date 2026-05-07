@@ -25,6 +25,16 @@
                 'new_order_id' => 'new_provider_order',
                 'new_label' => 'Nuevo proveedor',
             ],
+            [
+                'panel_key' => 'currencies',
+                'title' => 'Monedas',
+                'subtitle' => 'Codigos de moneda reutilizables para suscripciones, pagos y costos.',
+                'catalog_type' => 'currency',
+                'items' => $currencyOptions,
+                'new_name_id' => 'new_currency_name',
+                'new_order_id' => 'new_currency_order',
+                'new_label' => 'Nueva moneda (ISO 3 letras)',
+            ],
         ];
     @endphp
 
@@ -33,7 +43,7 @@
             <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
         @endif
 
-        <div x-data="{ openPanel: @js(old('catalog_type') === 'provider' ? 'providers' : 'types') }" class="space-y-4">
+        <div x-data="{ openPanel: @js(match (old('catalog_type')) { 'provider' => 'providers', 'currency' => 'currencies', default => 'types' }) }" class="space-y-4">
             @foreach ($sections as $section)
                 <section class="overflow-hidden rounded-xl border border-slate-200 bg-white">
                     <button
