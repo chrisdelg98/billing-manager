@@ -20,6 +20,13 @@ class Subscription extends Model
         'has_trial',
         'trial_ends_at',
         'is_active',
+        'license_api_enabled',
+        'license_code',
+        'license_secret_hash',
+        'license_secret_hint',
+        'license_key_rotated_at',
+        'license_key_revoked_at',
+        'license_last_used_at',
     ];
 
     protected function casts(): array
@@ -30,7 +37,16 @@ class Subscription extends Model
             'has_trial' => 'boolean',
             'trial_ends_at' => 'date',
             'is_active' => 'boolean',
+            'license_api_enabled' => 'boolean',
+            'license_key_rotated_at' => 'datetime',
+            'license_key_revoked_at' => 'datetime',
+            'license_last_used_at' => 'datetime',
         ];
+    }
+
+    public function hasLicenseCredentials(): bool
+    {
+        return ! empty($this->license_code) && ! empty($this->license_secret_hash);
     }
 
     public function isInTrial(?CarbonInterface $onDate = null): bool

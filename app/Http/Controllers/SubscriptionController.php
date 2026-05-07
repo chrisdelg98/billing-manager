@@ -76,6 +76,13 @@ class SubscriptionController extends Controller
     {
         $duplicate = $subscription->replicate();
         $duplicate->name = $subscription->name.' (copia)';
+        $duplicate->license_api_enabled = false;
+        $duplicate->license_code = null;
+        $duplicate->license_secret_hash = null;
+        $duplicate->license_secret_hint = null;
+        $duplicate->license_key_rotated_at = null;
+        $duplicate->license_key_revoked_at = null;
+        $duplicate->license_last_used_at = null;
         $duplicate->save();
 
         AuditLogger::log('duplicated', 'subscription', $duplicate->id, [
@@ -101,6 +108,7 @@ class SubscriptionController extends Controller
             'has_trial' => ['nullable', 'boolean'],
             'trial_ends_at' => ['nullable', 'date'],
             'is_active' => ['nullable', 'boolean'],
+            'license_api_enabled' => ['nullable', 'boolean'],
         ]);
 
         $data['currency'] = strtoupper((string) $data['currency']);
@@ -132,6 +140,7 @@ class SubscriptionController extends Controller
         }
 
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
+        $data['license_api_enabled'] = (bool) ($data['license_api_enabled'] ?? false);
 
         return $data;
     }

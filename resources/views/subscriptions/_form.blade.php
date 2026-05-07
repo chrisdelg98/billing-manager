@@ -183,6 +183,16 @@
         </label>
     </div>
 
+    <div class="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+        @php($licenseApiEnabled = (bool) old('license_api_enabled', $subscription->license_api_enabled ?? false))
+        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input type="checkbox" name="license_api_enabled" value="1" @checked($licenseApiEnabled) class="rounded border-slate-300 text-slate-900 focus:ring-slate-300">
+            Habilitar API de licencia (opcional)
+        </label>
+        <p class="mt-1 text-xs text-slate-500">Si se activa, podras generar un codigo y secreto en la seccion de gestion de licencia.</p>
+        @error('license_api_enabled')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
     <div
         x-cloak
         x-show="calcOpen"

@@ -7,6 +7,7 @@ use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\SubscriptionLicenseController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\UserPasswordController;
 use Illuminate\Support\Facades\Route;
@@ -43,6 +44,15 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/suscripciones/{subscription}/duplicar', [SubscriptionController::class, 'duplicate'])
         ->name('suscripciones.duplicate');
+
+    Route::post('/suscripciones/{subscription}/licencia/rotar', [SubscriptionLicenseController::class, 'rotate'])
+        ->name('suscripciones.licencia.rotate');
+
+    Route::post('/suscripciones/{subscription}/licencia/revocar', [SubscriptionLicenseController::class, 'revoke'])
+        ->name('suscripciones.licencia.revoke');
+
+    Route::post('/suscripciones/{subscription}/licencia/reactivar', [SubscriptionLicenseController::class, 'reactivate'])
+        ->name('suscripciones.licencia.reactivate');
 
     Route::resource('pagos', PaymentController::class)
         ->parameters(['pagos' => 'payment'])
