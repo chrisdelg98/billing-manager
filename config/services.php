@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'license_api' => [
+        'cipher_secret' => env('LICENSE_API_CIPHER_SECRET'),
+    ],
+
 ];

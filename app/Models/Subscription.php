@@ -23,6 +23,7 @@ class Subscription extends Model
         'license_api_enabled',
         'license_code',
         'license_secret_hash',
+        'license_secret_encrypted',
         'license_secret_hint',
         'license_key_rotated_at',
         'license_key_revoked_at',

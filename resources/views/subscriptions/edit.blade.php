@@ -28,10 +28,20 @@
             </div>
 
             @if (session('license_plain_secret'))
-                <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    <p class="font-semibold">Secreto generado (mostrar una sola vez):</p>
-                    <p class="mt-1 break-all font-mono">{{ session('license_plain_secret') }}</p>
-                    <p class="mt-1 text-xs">Guardalo de inmediato en el sistema externo. No podras volver a verlo despues.</p>
+                <div x-data="{ copied: false, secret: @js((string) session('license_plain_secret')) }" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <p class="font-semibold">Secreto de licencia cargado:</p>
+                    <p class="mt-1 break-all font-mono" x-text="secret"></p>
+                    <div class="mt-2 flex items-center gap-2">
+                        <button
+                            type="button"
+                            class="ui-btn inline-flex items-center rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-100"
+                            @click="navigator.clipboard.writeText(secret).then(() => { copied = true; setTimeout(() => copied = false, 1800); })"
+                        >
+                            Copiar secreto
+                        </button>
+                        <span x-show="copied" x-transition.opacity class="text-xs font-medium text-emerald-700">Copiado</span>
+                    </div>
+                    <p class="mt-2 text-xs">Puedes volver a mostrarlo con el boton "Ver secreto" si LICENSE_API_CIPHER_SECRET esta configurado.</p>
                 </div>
             @endif
 
@@ -70,6 +80,13 @@
                     @csrf
                     <button type="submit" class="ui-btn inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800" @disabled(! $subscription->license_api_enabled)>
                         {{ $subscription->license_secret_hash ? 'Rotar secreto' : 'Generar secreto' }}
+                    </button>
+                </form>
+
+                <form method="POST" action="{{ route('suscripciones.licencia.reveal', $subscription) }}">
+                    @csrf
+                    <button type="submit" class="ui-btn inline-flex items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50" @disabled(! $subscription->license_api_enabled || ! $subscription->license_secret_encrypted)>
+                        Ver secreto
                     </button>
                 </form>
 

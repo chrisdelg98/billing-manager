@@ -6,6 +6,7 @@ use App\Models\Subscription;
 use App\Support\AuditLogger;
 use App\Support\SubscriptionLicenseService;
 use Illuminate\Http\RedirectResponse;
+use RuntimeException;
 
 class SubscriptionLicenseController extends Controller
 {
@@ -17,7 +18,13 @@ class SubscriptionLicenseController extends Controller
             ]);
         }
 
-        $credentials = $licenseService->rotateSecret($subscription);
+        try {
+            $credentials = $licenseService->rotateSecret($subscription);
+        } catch (RuntimeException $exception) {
+            return back()->withErrors([
+                'license_api' => $exception->getMessage(),
+            ]);
+        }
 
         AuditLogger::log('rotated_secret', 'subscription_license', $subscription->id, [
             'license_code' => $credentials['license_code'],
@@ -26,6 +33,31 @@ class SubscriptionLicenseController extends Controller
         return back()
             ->with('status', 'Se genero un nuevo secreto de API para la suscripcion.')
             ->with('license_plain_secret', $credentials['license_secret']);
+    }
+
+    public function reveal(Subscription $subscription, SubscriptionLicenseService $licenseService): RedirectResponse
+    {
+        if (! $subscription->license_api_enabled) {
+            return back()->withErrors([
+                'license_api' => 'La API de licencia no esta activa en esta suscripcion.',
+            ]);
+        }
+
+        try {
+            $secret = $licenseService->revealSecret($subscription);
+        } catch (RuntimeException $exception) {
+            return back()->withErrors([
+                'license_api' => $exception->getMessage(),
+            ]);
+        }
+
+        AuditLogger::log('revealed_secret', 'subscription_license', $subscription->id, [
+            'license_code' => $subscription->license_code,
+        ]);
+
+        return back()
+            ->with('status', 'Se mostro el secreto actual de la licencia.')
+            ->with('license_plain_secret', $secret);
     }
 
     public function revoke(Subscription $subscription): RedirectResponse

@@ -48,6 +48,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/suscripciones/{subscription}/licencia/rotar', [SubscriptionLicenseController::class, 'rotate'])
         ->name('suscripciones.licencia.rotate');
 
+    Route::post('/suscripciones/{subscription}/licencia/revelar', [SubscriptionLicenseController::class, 'reveal'])
+        ->name('suscripciones.licencia.reveal');
+
     Route::post('/suscripciones/{subscription}/licencia/revocar', [SubscriptionLicenseController::class, 'revoke'])
         ->name('suscripciones.licencia.revoke');
 

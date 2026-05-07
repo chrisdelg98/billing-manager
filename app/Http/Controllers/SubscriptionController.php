@@ -79,6 +79,7 @@ class SubscriptionController extends Controller
         $duplicate->license_api_enabled = false;
         $duplicate->license_code = null;
         $duplicate->license_secret_hash = null;
+        $duplicate->license_secret_encrypted = null;
         $duplicate->license_secret_hint = null;
         $duplicate->license_key_rotated_at = null;
         $duplicate->license_key_revoked_at = null;
