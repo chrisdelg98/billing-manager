@@ -50,6 +50,36 @@ class Subscription extends Model
         return ! empty($this->license_code) && ! empty($this->license_secret_hash);
     }
 
+    public function daysUntilRenewal(?CarbonInterface $onDate = null): ?int
+    {
+        if (! $this->next_renewal_at) {
+            return null;
+        }
+
+        $baseDate = ($onDate ?? now())->copy()->startOfDay();
+
+        return $baseDate->diffInDays($this->next_renewal_at->copy()->startOfDay(), false);
+    }
+
+    public function renewalRiskLevel(?CarbonInterface $onDate = null): string
+    {
+        $days = $this->daysUntilRenewal($onDate);
+
+        if ($days === null || ! $this->is_active) {
+            return 'safe';
+        }
+
+        if ($days <= 2) {
+            return 'danger';
+        }
+
+        if ($days <= 10) {
+            return 'warning';
+        }
+
+        return 'safe';
+    }
+
     public function isInTrial(?CarbonInterface $onDate = null): bool
     {
         if (! $this->has_trial || ! $this->trial_ends_at) {

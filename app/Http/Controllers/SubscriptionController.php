@@ -15,7 +15,25 @@ class SubscriptionController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Subscription::query()->with('service')->latest();
+        $today = now()->startOfDay();
+
+        $query = Subscription::query()
+            ->with('service')
+            ->orderByRaw('CASE WHEN next_renewal_at IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('next_renewal_at')
+            ->latest('id');
+
+        if ($request->filled('q')) {
+            $search = trim((string) $request->string('q'));
+
+            $query->where(function ($builder) use ($search): void {
+                $builder
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('service', function ($serviceQuery) use ($search): void {
+                        $serviceQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
 
         if ($request->filled('service_id')) {
             $query->where('service_id', (int) $request->integer('service_id'));
@@ -23,6 +41,91 @@ class SubscriptionController extends Controller
 
         if ($request->filled('status')) {
             $query->where('is_active', $request->string('status')->toString() === 'active');
+        }
+
+        if ($request->filled('billing_cycle')) {
+            $query->where('billing_cycle', (string) $request->string('billing_cycle'));
+        }
+
+        if ($request->filled('trial_status')) {
+            $trialStatus = (string) $request->string('trial_status');
+
+            if ($trialStatus === 'in_trial') {
+                $query
+                    ->where('has_trial', true)
+                    ->whereNotNull('trial_ends_at')
+                    ->whereDate('trial_ends_at', '>=', $today->toDateString());
+            }
+
+            if ($trialStatus === 'trial_ended') {
+                $query
+                    ->where('has_trial', true)
+                    ->whereNotNull('trial_ends_at')
+                    ->whereDate('trial_ends_at', '<', $today->toDateString());
+            }
+
+            if ($trialStatus === 'no_trial') {
+                $query->where('has_trial', false);
+            }
+        }
+
+        if ($request->filled('renewal_window')) {
+            $window = (string) $request->string('renewal_window');
+
+            if ($window === 'overdue') {
+                $query
+                    ->whereNotNull('next_renewal_at')
+                    ->whereDate('next_renewal_at', '<', $today->toDateString());
+            }
+
+            if ($window === 'next_7') {
+                $query
+                    ->whereNotNull('next_renewal_at')
+                    ->whereBetween('next_renewal_at', [
+                        $today->toDateString(),
+                        $today->copy()->addDays(7)->toDateString(),
+                    ]);
+            }
+
+            if ($window === 'next_30') {
+                $query
+                    ->whereNotNull('next_renewal_at')
+                    ->whereBetween('next_renewal_at', [
+                        $today->toDateString(),
+                        $today->copy()->addDays(30)->toDateString(),
+                    ]);
+            }
+
+            if ($window === 'no_date') {
+                $query->whereNull('next_renewal_at');
+            }
+        }
+
+        if ($request->filled('renewal_risk')) {
+            $risk = (string) $request->string('renewal_risk');
+
+            if ($risk === 'danger') {
+                $query
+                    ->whereNotNull('next_renewal_at')
+                    ->whereDate('next_renewal_at', '<=', $today->copy()->addDays(2)->toDateString());
+            }
+
+            if ($risk === 'warning') {
+                $query
+                    ->whereNotNull('next_renewal_at')
+                    ->whereBetween('next_renewal_at', [
+                        $today->copy()->addDays(3)->toDateString(),
+                        $today->copy()->addDays(10)->toDateString(),
+                    ]);
+            }
+
+            if ($risk === 'safe') {
+                $query->where(function ($builder) use ($today): void {
+                    $builder
+                        ->whereNull('next_renewal_at')
+                        ->orWhereDate('next_renewal_at', '>', $today->copy()->addDays(10)->toDateString());
+                });
+            }
         }
 
         $subscriptions = $query->paginate(10)->withQueryString();
