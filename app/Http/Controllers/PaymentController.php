@@ -27,12 +27,32 @@ class PaymentController extends Controller
         return view('payments.index', compact('payments', 'services'));
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
         $services = Service::query()->orderBy('name')->get(['id', 'name']);
-        $subscriptions = Subscription::query()->orderBy('name')->get(['id', 'name', 'service_id']);
+        $subscriptions = Subscription::query()->orderBy('name')->get(['id', 'name', 'service_id', 'amount', 'currency']);
 
-        return view('payments.create', compact('services', 'subscriptions'));
+        $defaultSubscription = null;
+
+        if ($request->filled('subscription_id')) {
+            $defaultSubscription = Subscription::query()->find((int) $request->integer('subscription_id'));
+        }
+
+        $defaultServiceId = (int) ($request->integer('service_id') ?: ($defaultSubscription?->service_id ?? 0));
+        $defaultSubscriptionId = (int) ($defaultSubscription?->id ?? 0);
+        $defaultBaseAmount = $defaultSubscription ? (float) $defaultSubscription->amount : null;
+        $defaultAmount = $defaultSubscription ? (float) $defaultSubscription->amount : null;
+        $defaultCurrency = $defaultSubscription ? (string) $defaultSubscription->currency : 'USD';
+
+        return view('payments.create', compact(
+            'services',
+            'subscriptions',
+            'defaultServiceId',
+            'defaultSubscriptionId',
+            'defaultBaseAmount',
+            'defaultAmount',
+            'defaultCurrency',
+        ));
     }
 
     public function store(Request $request): RedirectResponse
@@ -48,7 +68,7 @@ class PaymentController extends Controller
     public function edit(Payment $payment): View
     {
         $services = Service::query()->orderBy('name')->get(['id', 'name']);
-        $subscriptions = Subscription::query()->orderBy('name')->get(['id', 'name', 'service_id']);
+        $subscriptions = Subscription::query()->orderBy('name')->get(['id', 'name', 'service_id', 'amount', 'currency']);
 
         return view('payments.edit', compact('payment', 'services', 'subscriptions'));
     }
@@ -80,6 +100,9 @@ class PaymentController extends Controller
             'service_id' => ['required', 'exists:services,id'],
             'subscription_id' => ['nullable', 'exists:subscriptions,id'],
             'paid_at' => ['required', 'date'],
+            'base_amount' => ['nullable', 'numeric', 'min:0'],
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'amount' => ['required', 'numeric', 'min:0'],
             'currency' => ['required', 'string', 'size:3'],
             'method' => ['required', 'in:transfer,cash,other'],
@@ -101,6 +124,34 @@ class PaymentController extends Controller
                 ]);
             }
         }
+
+        $baseAmount = (float) ($data['base_amount'] ?? 0);
+        $discountPercent = (float) ($data['discount_percent'] ?? 0);
+        $discountAmount = (float) ($data['discount_amount'] ?? 0);
+
+        if ($baseAmount > 0 && ($discountPercent > 0 || $discountAmount > 0)) {
+            if ($discountAmount <= 0) {
+                $discountAmount = round($baseAmount * ($discountPercent / 100), 2);
+            } elseif ($discountPercent <= 0) {
+                $discountPercent = round(($discountAmount / $baseAmount) * 100, 2);
+            }
+
+            $discountAmount = min($discountAmount, $baseAmount);
+            $data['amount'] = round($baseAmount - $discountAmount, 2);
+
+            $discountDetail = sprintf(
+                'Descuento aplicado: %.2f%% (%.2f %s) sobre base %.2f %s.',
+                $discountPercent,
+                $discountAmount,
+                $data['currency'],
+                $baseAmount,
+                $data['currency']
+            );
+
+            $data['notes'] = trim(($data['notes'] ?? '')."\n".$discountDetail);
+        }
+
+        unset($data['base_amount'], $data['discount_percent'], $data['discount_amount']);
 
         return $data;
     }

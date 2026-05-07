@@ -56,6 +56,13 @@
                                 <td class="px-4 py-3 text-slate-700">{{ $subscription->is_active ? 'Activa' : 'Inactiva' }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-end gap-2">
+                                        <a href="{{ route('pagos.create', ['service_id' => $subscription->service_id, 'subscription_id' => $subscription->id]) }}" class="ui-btn rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50">Generar pago</a>
+
+                                        <form method="POST" action="{{ route('suscripciones.duplicate', $subscription) }}" onsubmit="return confirm('Se duplicara la suscripcion y se abrira para edicion. Continuar?')">
+                                            @csrf
+                                            <button type="submit" class="ui-btn rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-50">Duplicar</button>
+                                        </form>
+
                                         <a href="{{ route('suscripciones.edit', $subscription) }}" class="ui-btn rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">Editar</a>
                                         <form method="POST" action="{{ route('suscripciones.destroy', $subscription) }}" onsubmit="return confirm('Se eliminara la suscripcion. Continuar?')">
                                             @csrf

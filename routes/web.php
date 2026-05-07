@@ -41,6 +41,9 @@ Route::middleware('auth')->group(function () {
         ->parameters(['suscripciones' => 'subscription'])
         ->except(['show']);
 
+    Route::post('/suscripciones/{subscription}/duplicar', [SubscriptionController::class, 'duplicate'])
+        ->name('suscripciones.duplicate');
+
     Route::resource('pagos', PaymentController::class)
         ->parameters(['pagos' => 'payment'])
         ->except(['show']);

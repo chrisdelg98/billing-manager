@@ -70,6 +70,22 @@ class SubscriptionController extends Controller
         return redirect()->route('suscripciones.index')->with('status', 'Suscripcion eliminada correctamente.');
     }
 
+    public function duplicate(Subscription $subscription): RedirectResponse
+    {
+        $duplicate = $subscription->replicate();
+        $duplicate->name = $subscription->name.' (copia)';
+        $duplicate->save();
+
+        AuditLogger::log('duplicated', 'subscription', $duplicate->id, [
+            'source_subscription_id' => $subscription->id,
+            'source_name' => $subscription->name,
+        ]);
+
+        return redirect()
+            ->route('suscripciones.edit', $duplicate)
+            ->with('status', 'Suscripcion duplicada. Revisa y ajusta los datos antes de guardar.');
+    }
+
     private function validatedData(Request $request): array
     {
         $data = $request->validate([
