@@ -3,7 +3,7 @@
         <h2 class="text-xl font-semibold leading-tight text-slate-900">Editar suscripcion</h2>
     </x-slot>
 
-    <div class="mx-auto w-full max-w-4xl space-y-6">
+    <div class="mx-auto w-full max-w-6xl space-y-6">
         @if (session('status'))
             <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
         @endif

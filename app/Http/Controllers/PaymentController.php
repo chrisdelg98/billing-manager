@@ -37,8 +37,6 @@ class PaymentController extends Controller
             'service_id',
             'amount',
             'currency',
-            'billing_cycle',
-            'next_renewal_at',
             'notes',
         ]);
 
@@ -54,9 +52,6 @@ class PaymentController extends Controller
         $defaultAmount = $defaultSubscription ? (float) $defaultSubscription->amount : null;
         $defaultCurrency = $defaultSubscription ? (string) $defaultSubscription->currency : 'USD';
         $defaultNotes = $defaultSubscription ? (string) ($defaultSubscription->notes ?? '') : '';
-        $defaultCoveredPeriod = $defaultSubscription?->next_renewal_at
-            ? $defaultSubscription->next_renewal_at->format('Y-m')
-            : now()->format('Y-m');
 
         return view('payments.create', compact(
             'services',
@@ -67,7 +62,6 @@ class PaymentController extends Controller
             'defaultAmount',
             'defaultCurrency',
             'defaultNotes',
-            'defaultCoveredPeriod',
         ));
     }
 
@@ -92,19 +86,16 @@ class PaymentController extends Controller
             'service_id',
             'amount',
             'currency',
-            'billing_cycle',
-            'next_renewal_at',
             'notes',
         ]);
         $defaultNotes = (string) ($payment->notes ?? '');
-        $defaultCoveredPeriod = $payment->covered_period_start?->format('Y-m') ?? $payment->paid_at?->format('Y-m') ?? now()->format('Y-m');
 
-        return view('payments.edit', compact('payment', 'services', 'subscriptions', 'defaultNotes', 'defaultCoveredPeriod'));
+        return view('payments.edit', compact('payment', 'services', 'subscriptions', 'defaultNotes'));
     }
 
     public function update(Request $request, Payment $payment): RedirectResponse
     {
-        $data = $this->validatedData($request, $payment);
+        $data = $this->validatedData($request);
         $payment->update($data);
 
         AuditLogger::log('updated', 'payment', $payment->id, ['amount' => $payment->amount]);
@@ -123,13 +114,12 @@ class PaymentController extends Controller
         return redirect()->route('pagos.index')->with('status', 'Pago eliminado correctamente.');
     }
 
-    private function validatedData(Request $request, ?Payment $payment = null): array
+    private function validatedData(Request $request): array
     {
         $data = $request->validate([
             'service_id' => ['required', 'exists:services,id'],
             'subscription_id' => ['nullable', 'exists:subscriptions,id'],
             'paid_at' => ['required', 'date'],
-            'covered_period' => ['nullable', 'date_format:Y-m'],
             'base_amount' => ['nullable', 'numeric', 'min:0'],
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
@@ -141,50 +131,25 @@ class PaymentController extends Controller
         ]);
 
         $data['currency'] = strtoupper((string) $data['currency']);
+        $subscription = null;
 
         if (! empty($data['subscription_id'])) {
-            $belongsToService = Subscription::query()
-                ->whereKey($data['subscription_id'])
-                ->where('service_id', $data['service_id'])
-                ->exists();
+            $subscription = Subscription::query()
+                ->select(['id', 'service_id', 'billing_cycle'])
+                ->find((int) $data['subscription_id']);
+
+            $belongsToService = $subscription && (int) $subscription->service_id === (int) $data['service_id'];
 
             if (! $belongsToService) {
                 throw ValidationException::withMessages([
                     'subscription_id' => 'La suscripcion seleccionada no pertenece al servicio indicado.',
                 ]);
             }
-
-            if (empty($data['covered_period'])) {
-                throw ValidationException::withMessages([
-                    'covered_period' => 'Indica el periodo que cubre este pago (YYYY-MM).',
-                ]);
-            }
         }
 
-        $coveredPeriodStart = null;
-
-        if (! empty($data['covered_period'])) {
-            $coveredPeriodStart = Carbon::createFromFormat('Y-m', (string) $data['covered_period'])->startOfMonth();
-            $data['covered_period_start'] = $coveredPeriodStart->toDateString();
-        } else {
-            $data['covered_period_start'] = null;
-        }
-
-        if (! empty($data['subscription_id']) && $coveredPeriodStart) {
-            $duplicateQuery = Payment::query()
-                ->where('subscription_id', $data['subscription_id'])
-                ->whereDate('covered_period_start', $coveredPeriodStart->toDateString());
-
-            if ($payment) {
-                $duplicateQuery->whereKeyNot($payment->id);
-            }
-
-            if ($duplicateQuery->exists()) {
-                throw ValidationException::withMessages([
-                    'covered_period' => 'Ya existe un pago para esta suscripcion y este periodo cubierto.',
-                ]);
-            }
-        }
+        $data['covered_period_start'] = Carbon::parse((string) $data['paid_at'])
+            ->startOfMonth()
+            ->toDateString();
 
         $baseAmount = (float) ($data['base_amount'] ?? 0);
         $discountPercent = (float) ($data['discount_percent'] ?? 0);
@@ -212,7 +177,7 @@ class PaymentController extends Controller
             $data['notes'] = trim(($data['notes'] ?? '')."\n".$discountDetail);
         }
 
-        unset($data['base_amount'], $data['discount_percent'], $data['discount_amount'], $data['covered_period']);
+        unset($data['base_amount'], $data['discount_percent'], $data['discount_amount']);
 
         return $data;
     }

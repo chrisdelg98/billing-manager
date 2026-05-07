@@ -229,13 +229,20 @@ class SubscriptionController extends Controller
         }
 
         if ($data['has_trial']) {
-            $trialEnd = Carbon::parse((string) $data['trial_ends_at'])->toDateString();
-            $nextRenewal = ! empty($data['next_renewal_at'])
-                ? Carbon::parse((string) $data['next_renewal_at'])->toDateString()
-                : null;
+            $trialEnd = Carbon::parse((string) $data['trial_ends_at'])->startOfDay();
 
-            if (! $nextRenewal || $nextRenewal < $trialEnd) {
-                $data['next_renewal_at'] = $trialEnd;
+            if (! empty($data['next_renewal_at'])) {
+                $manualNextRenewal = Carbon::parse((string) $data['next_renewal_at'])->startOfDay();
+
+                if ($manualNextRenewal->lt($trialEnd->copy()->addDay())) {
+                    throw ValidationException::withMessages([
+                        'next_renewal_at' => 'La renovacion manual debe ser posterior al fin del periodo de prueba.',
+                    ]);
+                }
+
+                $data['next_renewal_at'] = $manualNextRenewal->toDateString();
+            } else {
+                $data['next_renewal_at'] = $this->automaticRenewalAfterTrial($trialEnd, (string) $data['billing_cycle'])->toDateString();
             }
         }
 
@@ -247,5 +254,14 @@ class SubscriptionController extends Controller
         $data['license_api_enabled'] = (bool) ($data['license_api_enabled'] ?? false);
 
         return $data;
+    }
+
+    private function automaticRenewalAfterTrial(Carbon $trialEnd, string $billingCycle): Carbon
+    {
+        $startAfterTrial = $trialEnd->copy()->addDay()->startOfDay();
+
+        return $billingCycle === 'yearly'
+            ? $startAfterTrial->copy()->addYearNoOverflow()->subDay()->startOfDay()
+            : $startAfterTrial->copy()->addMonthNoOverflow()->subDay()->startOfDay();
     }
 }

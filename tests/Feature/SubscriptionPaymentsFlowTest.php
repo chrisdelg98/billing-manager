@@ -72,7 +72,7 @@ class SubscriptionPaymentsFlowTest extends TestCase
             ->assertSee("subscriptionId: '{$subscription->id}'", false)
             ->assertSee('baseAmount: Number(25)', false)
             ->assertSee('Descuento (%)')
-            ->assertSee('Periodo que cubre');
+            ->assertDontSee('Periodo que cubre');
     }
 
     public function test_payment_store_applies_discount_percentage_to_final_amount(): void
@@ -98,7 +98,6 @@ class SubscriptionPaymentsFlowTest extends TestCase
                 'service_id' => $service->id,
                 'subscription_id' => $subscription->id,
                 'paid_at' => now()->toDateString(),
-                'covered_period' => now()->format('Y-m'),
                 'base_amount' => 100,
                 'discount_percent' => 15,
                 'discount_amount' => 0,
@@ -140,7 +139,6 @@ class SubscriptionPaymentsFlowTest extends TestCase
                 'service_id' => $service->id,
                 'subscription_id' => $subscription->id,
                 'paid_at' => '2026-06-30',
-                'covered_period' => '2026-06',
                 'base_amount' => 25,
                 'discount_percent' => 0,
                 'discount_amount' => 0,
@@ -178,7 +176,6 @@ class SubscriptionPaymentsFlowTest extends TestCase
                 'service_id' => $service->id,
                 'subscription_id' => $subscription->id,
                 'paid_at' => '2026-06-30',
-                'covered_period' => '2026-06',
                 'base_amount' => 200,
                 'discount_percent' => 0,
                 'discount_amount' => 0,
@@ -192,7 +189,35 @@ class SubscriptionPaymentsFlowTest extends TestCase
         $this->assertEquals('2027-06-30', $subscription->fresh()->next_renewal_at?->toDateString());
     }
 
-    public function test_payment_store_blocks_duplicate_subscription_period(): void
+    public function test_payment_create_form_hides_manual_covered_period_field(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE ANUAL PREFILL',
+            'billing_cycle' => 'yearly',
+            'amount' => 200,
+            'currency' => 'USD',
+            'next_renewal_at' => '2027-06-30',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('pagos.create', [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+            ]))
+            ->assertOk()
+            ->assertDontSee('Periodo que cubre');
+    }
+
+    public function test_payment_store_allows_multiple_records_for_same_subscription_period(): void
     {
         $user = User::factory()->create();
 
@@ -223,12 +248,10 @@ class SubscriptionPaymentsFlowTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->from(route('pagos.create'))
             ->post(route('pagos.store'), [
                 'service_id' => $service->id,
                 'subscription_id' => $subscription->id,
                 'paid_at' => '2026-06-20',
-                'covered_period' => '2026-06',
                 'base_amount' => 25,
                 'discount_percent' => 0,
                 'discount_amount' => 0,
@@ -237,13 +260,60 @@ class SubscriptionPaymentsFlowTest extends TestCase
                 'method' => 'transfer',
                 'reference' => 'RNW-DUP-002',
             ])
-            ->assertRedirect(route('pagos.create'))
-            ->assertSessionHasErrors('covered_period');
+            ->assertRedirect(route('pagos.index'));
 
-        $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseCount('payments', 2);
     }
 
-    public function test_late_payment_does_not_move_subscription_next_renewal(): void
+    public function test_yearly_payment_allows_new_record_in_following_month(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE ANUAL',
+            'billing_cycle' => 'yearly',
+            'amount' => 200,
+            'currency' => 'USD',
+            'next_renewal_at' => '2026-06-30',
+            'is_active' => true,
+        ]);
+
+        Payment::query()->create([
+            'service_id' => $service->id,
+            'subscription_id' => $subscription->id,
+            'paid_at' => '2026-06-10',
+            'covered_period_start' => '2026-06-01',
+            'amount' => 200,
+            'currency' => 'USD',
+            'method' => 'transfer',
+            'reference' => 'ANUAL-001',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('pagos.store'), [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+                'paid_at' => '2026-07-05',
+                'base_amount' => 200,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'amount' => 200,
+                'currency' => 'USD',
+                'method' => 'transfer',
+                'reference' => 'ANUAL-002',
+            ])
+            ->assertRedirect(route('pagos.index'));
+
+        $this->assertDatabaseCount('payments', 2);
+    }
+
+    public function test_payment_date_month_advances_subscription_next_renewal(): void
     {
         $user = User::factory()->create();
 
@@ -267,7 +337,6 @@ class SubscriptionPaymentsFlowTest extends TestCase
                 'service_id' => $service->id,
                 'subscription_id' => $subscription->id,
                 'paid_at' => '2026-06-15',
-                'covered_period' => '2026-05',
                 'base_amount' => 25,
                 'discount_percent' => 0,
                 'discount_amount' => 0,
@@ -278,7 +347,7 @@ class SubscriptionPaymentsFlowTest extends TestCase
             ])
             ->assertRedirect(route('pagos.index'));
 
-        $this->assertEquals('2026-06-30', $subscription->fresh()->next_renewal_at?->toDateString());
+        $this->assertEquals('2026-07-30', $subscription->fresh()->next_renewal_at?->toDateString());
     }
 
     public function test_subscription_can_store_optional_trial_period(): void
@@ -311,7 +380,38 @@ class SubscriptionPaymentsFlowTest extends TestCase
         ]);
 
         $created = Subscription::query()->where('name', 'CLINEXUS CORE - PRUEBA')->firstOrFail();
+        $expectedRenewal = \Carbon\Carbon::parse($trialEnd)->addDay()->addMonthNoOverflow()->subDay()->toDateString();
+
         $this->assertSame($trialEnd, $created->trial_ends_at?->toDateString());
+        $this->assertSame($expectedRenewal, $created->next_renewal_at?->toDateString());
+    }
+
+    public function test_subscription_trial_respects_manual_next_renewal_override(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('suscripciones.store'), [
+                'service_id' => $service->id,
+                'name' => 'CLINEXUS CORE - PRUEBA MANUAL',
+                'billing_cycle' => 'yearly',
+                'amount' => 120,
+                'currency' => 'USD',
+                'has_trial' => 1,
+                'trial_ends_at' => '2026-06-30',
+                'next_renewal_at' => '2027-08-15',
+                'is_active' => 1,
+            ])
+            ->assertRedirect(route('suscripciones.index'));
+
+        $subscription = Subscription::query()->where('name', 'CLINEXUS CORE - PRUEBA MANUAL')->firstOrFail();
+
+        $this->assertSame('2027-08-15', $subscription->next_renewal_at?->toDateString());
     }
 
     public function test_subscription_keeps_trial_history_after_trial_end(): void

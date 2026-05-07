@@ -30,8 +30,6 @@
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                         <tr>
                             <th class="px-4 py-3">Fecha</th>
-                            <th class="px-4 py-3">Periodo</th>
-                            <th class="px-4 py-3">Tipo de cobro</th>
                             <th class="px-4 py-3">Servicio</th>
                             <th class="px-4 py-3">Suscripcion</th>
                             <th class="px-4 py-3">Monto</th>
@@ -44,8 +42,6 @@
                         @forelse($payments as $payment)
                             <tr>
                                 <td class="px-4 py-3 text-slate-700">{{ $payment->paid_at?->format('Y-m-d') }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $payment->coveredPeriodLabel() }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $payment->coverageTimingLabel() }}</td>
                                 <td class="px-4 py-3 font-medium text-slate-900">{{ $payment->service?->name }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $payment->subscription?->name ?: '-' }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ number_format((float) $payment->amount, 2) }} {{ $payment->currency }}</td>
@@ -64,7 +60,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="px-4 py-8 text-center text-sm text-slate-500">No hay pagos registrados.</td>
+                                <td colspan="7" class="px-4 py-8 text-center text-sm text-slate-500">No hay pagos registrados.</td>
                             </tr>
                         @endforelse
                     </tbody>

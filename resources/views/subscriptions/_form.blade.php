@@ -14,7 +14,7 @@
 @endphp
 
 <div
-    class="grid gap-5 sm:grid-cols-2"
+    class="grid gap-6 lg:grid-cols-3"
     x-data="{
         billingCycle: @js((string) $billingCycle),
         amount: Number(@js($seedAmount)),
@@ -86,112 +86,117 @@
         }
     }"
 >
-    <div class="sm:col-span-2">
-        <label for="service_id" class="mb-1 block text-sm font-medium text-slate-700">Servicio</label>
-        <select id="service_id" name="service_id" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-            <option value="">Selecciona un servicio</option>
-            @foreach($services as $serviceOption)
-                <option value="{{ $serviceOption->id }}" @selected((int) old('service_id', $subscription->service_id ?? 0) === $serviceOption->id)>{{ $serviceOption->name }}</option>
-            @endforeach
-        </select>
-        @error('service_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-    </div>
-
-    <div class="sm:col-span-2">
-        <label for="name" class="mb-1 block text-sm font-medium text-slate-700">Nombre</label>
-        <input id="name" name="name" type="text" value="{{ old('name', $subscription->name ?? '') }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-        @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-    </div>
-
-    <div>
-        <label for="billing_cycle" class="mb-1 block text-sm font-medium text-slate-700">Ciclo de cobro</label>
-        <select id="billing_cycle" name="billing_cycle" required x-model="billingCycle" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-            <option value="monthly" @selected($billingCycle === 'monthly')>Mensual</option>
-            <option value="yearly" @selected($billingCycle === 'yearly')>Anual</option>
-        </select>
-        @error('billing_cycle')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-    </div>
-
-    <div>
-        <div class="mb-1 flex items-center justify-between gap-2">
-            <label for="amount" class="block text-sm font-medium text-slate-700">Monto</label>
-            <button
-                type="button"
-                class="inline-flex items-center rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                @click="openAnnualAssistant()"
-            >
-                Asistente anual
-            </button>
+    <div class="space-y-5 lg:col-span-2">
+        <div>
+            <label for="service_id" class="mb-1 block text-sm font-medium text-slate-700">Servicio</label>
+            <select id="service_id" name="service_id" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                <option value="">Selecciona un servicio</option>
+                @foreach($services as $serviceOption)
+                    <option value="{{ $serviceOption->id }}" @selected((int) old('service_id', $subscription->service_id ?? 0) === $serviceOption->id)>{{ $serviceOption->name }}</option>
+                @endforeach
+            </select>
+            @error('service_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
-        <input id="amount" name="amount" type="number" step="0.01" min="0" value="{{ old('amount', $subscription->amount ?? '') }}" x-model.number="amount" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-        <p class="mt-1 text-xs text-slate-500">Usa el asistente para convertir mensual a anual y aplicar descuento sugerido.</p>
-        @error('amount')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-    </div>
 
-    <div>
-        <label for="currency" class="mb-1 block text-sm font-medium text-slate-700">Moneda</label>
-        <input id="currency" name="currency" type="text" maxlength="3" value="{{ old('currency', $subscription->currency ?? 'USD') }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 uppercase text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-        @error('currency')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-    </div>
-
-    <div>
-        <label for="next_renewal_at" class="mb-1 block text-sm font-medium text-slate-700">Proxima renovacion</label>
-        <input id="next_renewal_at" name="next_renewal_at" type="date" value="{{ old('next_renewal_at', isset($subscription) && $subscription->next_renewal_at ? $subscription->next_renewal_at->toDateString() : '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-        @error('next_renewal_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-    </div>
-
-    <div class="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
-        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input
-                type="checkbox"
-                name="has_trial"
-                value="1"
-                x-model="hasTrial"
-                x-on:change="if (!hasTrial) { trialEndsAt = '' }"
-                class="rounded border-slate-300 text-slate-900 focus:ring-slate-300"
-            >
-            Tiene periodo de prueba (opcional)
-        </label>
-        <p class="mt-1 text-xs text-slate-500">Si esta activo, la suscripcion no cuenta como ingreso recurrente hasta finalizar la prueba.</p>
-
-        <div class="mt-3" x-show="hasTrial" x-cloak>
-            <label for="trial_ends_at" class="mb-1 block text-sm font-medium text-slate-700">Periodo de prueba hasta</label>
-            <input
-                id="trial_ends_at"
-                name="trial_ends_at"
-                type="date"
-                x-model="trialEndsAt"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200"
-            >
-            <p class="mt-1 text-xs text-slate-500">Al vencer esta fecha, la suscripcion pasa automaticamente a estado normal y se conserva el historico de prueba.</p>
+        <div>
+            <label for="name" class="mb-1 block text-sm font-medium text-slate-700">Nombre</label>
+            <input id="name" name="name" type="text" value="{{ old('name', $subscription->name ?? '') }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+            @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
-        @error('trial_ends_at')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+
+        <div class="grid gap-5 sm:grid-cols-2">
+            <div>
+                <label for="billing_cycle" class="mb-1 block text-sm font-medium text-slate-700">Ciclo de cobro</label>
+                <select id="billing_cycle" name="billing_cycle" required x-model="billingCycle" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                    <option value="monthly" @selected($billingCycle === 'monthly')>Mensual</option>
+                    <option value="yearly" @selected($billingCycle === 'yearly')>Anual</option>
+                </select>
+                @error('billing_cycle')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+
+            <div>
+                <div class="mb-1 flex items-center justify-between gap-2">
+                    <label for="amount" class="block text-sm font-medium text-slate-700">Monto</label>
+                    <button
+                        type="button"
+                        class="inline-flex items-center rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                        @click="openAnnualAssistant()"
+                    >
+                        Asistente anual
+                    </button>
+                </div>
+                <input id="amount" name="amount" type="number" step="0.01" min="0" value="{{ old('amount', $subscription->amount ?? '') }}" x-model.number="amount" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                @error('amount')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+
+            <div>
+                <label for="currency" class="mb-1 block text-sm font-medium text-slate-700">Moneda</label>
+                <input id="currency" name="currency" type="text" maxlength="3" value="{{ old('currency', $subscription->currency ?? 'USD') }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 uppercase text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                @error('currency')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+
+            <div>
+                <label for="next_renewal_at" class="mb-1 block text-sm font-medium text-slate-700">Proxima renovacion</label>
+                <input id="next_renewal_at" name="next_renewal_at" type="date" value="{{ old('next_renewal_at', isset($subscription) && $subscription->next_renewal_at ? $subscription->next_renewal_at->toDateString() : '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                <p class="mt-1 text-xs text-slate-500">Si hay periodo de prueba y dejas este campo vacio, se calcula automaticamente.</p>
+                @error('next_renewal_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+        </div>
+
+        <div>
+            <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notas</label>
+            <textarea id="notes" name="notes" rows="4" maxlength="1000" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200" placeholder="Ejemplo: Mes de prueba / Descuento 20% por onboarding">{{ old('notes', $subscription->notes ?? '') }}</textarea>
+            @error('notes')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
     </div>
 
-    <div class="sm:col-span-2">
-        <label for="notes" class="mb-1 block text-sm font-medium text-slate-700">Notas</label>
-        <textarea id="notes" name="notes" rows="3" maxlength="1000" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200" placeholder="Ejemplo: Mes de prueba / Descuento 20% por onboarding">{{ old('notes', $subscription->notes ?? '') }}</textarea>
-        <p class="mt-1 text-xs text-slate-500">Guarda aqui acuerdos comerciales para reutilizarlos al momento de cobrar.</p>
-        @error('notes')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-    </div>
+    <aside class="space-y-5 lg:col-span-1">
+        <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input
+                    type="checkbox"
+                    name="has_trial"
+                    value="1"
+                    x-model="hasTrial"
+                    x-on:change="if (!hasTrial) { trialEndsAt = '' }"
+                    class="rounded border-slate-300 text-slate-900 focus:ring-slate-300"
+                >
+                Tiene periodo de prueba (opcional)
+            </label>
+            <p class="mt-1 text-xs text-slate-500">Si esta activo, la suscripcion no cuenta como ingreso recurrente hasta finalizar la prueba.</p>
 
-    <div class="sm:col-span-2">
-        @php($active = (bool) old('is_active', $subscription->is_active ?? true))
-        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input type="checkbox" name="is_active" value="1" @checked($active) class="rounded border-slate-300 text-slate-900 focus:ring-slate-300">
-            Suscripcion activa
-        </label>
-    </div>
+            <div class="mt-3" x-show="hasTrial" x-cloak>
+                <label for="trial_ends_at" class="mb-1 block text-sm font-medium text-slate-700">Periodo de prueba hasta</label>
+                <input
+                    id="trial_ends_at"
+                    name="trial_ends_at"
+                    type="date"
+                    x-model="trialEndsAt"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                >
+                <p class="mt-1 text-xs text-slate-500">Al vencer esta fecha, la suscripcion pasa automaticamente a estado normal y se conserva el historico de prueba.</p>
+            </div>
+            @error('trial_ends_at')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
 
-    <div class="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
-        @php($licenseApiEnabled = (bool) old('license_api_enabled', $subscription->license_api_enabled ?? false))
-        <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input type="checkbox" name="license_api_enabled" value="1" @checked($licenseApiEnabled) class="rounded border-slate-300 text-slate-900 focus:ring-slate-300">
-            Habilitar API de licencia (opcional)
-        </label>
-        <p class="mt-1 text-xs text-slate-500">Si se activa, podras generar un codigo y secreto en la seccion de gestion de licencia.</p>
-        @error('license_api_enabled')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
-    </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4">
+            @php($active = (bool) old('is_active', $subscription->is_active ?? true))
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input type="checkbox" name="is_active" value="1" @checked($active) class="rounded border-slate-300 text-slate-900 focus:ring-slate-300">
+                Suscripcion activa
+            </label>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+            @php($licenseApiEnabled = (bool) old('license_api_enabled', $subscription->license_api_enabled ?? false))
+            <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                <input type="checkbox" name="license_api_enabled" value="1" @checked($licenseApiEnabled) class="rounded border-slate-300 text-slate-900 focus:ring-slate-300">
+                Habilitar API de licencia (opcional)
+            </label>
+            <p class="mt-1 text-xs text-slate-500">Si se activa, podras generar un codigo y secreto en la seccion de gestion de licencia.</p>
+            @error('license_api_enabled')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
+    </aside>
 
     <div
         x-cloak
