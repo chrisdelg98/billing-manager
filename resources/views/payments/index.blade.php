@@ -49,6 +49,7 @@
                                 <td class="px-4 py-3 text-slate-700">{{ $payment->reference ?: '-' }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-end gap-2">
+                                        <a href="{{ route('comprobantes.pagos.show', $payment) }}" class="ui-btn rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50">Comprobante</a>
                                         <a href="{{ route('pagos.edit', $payment) }}" class="ui-btn rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">Editar</a>
                                         <form method="POST" action="{{ route('pagos.destroy', $payment) }}" onsubmit="return confirm('Se eliminara el pago. Continuar?')">
                                             @csrf

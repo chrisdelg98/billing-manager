@@ -140,6 +140,7 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-end gap-2">
+                                        <a href="{{ route('comprobantes.suscripciones.recordatorio', $subscription) }}" class="ui-btn rounded-lg border border-orange-300 px-3 py-1.5 text-xs font-medium text-orange-700 transition hover:bg-orange-50">Voucher</a>
                                         <a href="{{ route('pagos.create', ['service_id' => $subscription->service_id, 'subscription_id' => $subscription->id]) }}" class="ui-btn rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50">Generar pago</a>
 
                                         <form method="POST" action="{{ route('suscripciones.duplicate', $subscription) }}" onsubmit="return confirm('Se duplicara la suscripcion y se abrira para edicion. Continuar?')">

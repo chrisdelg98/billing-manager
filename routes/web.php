@@ -5,6 +5,7 @@ use App\Http\Controllers\CostAllocationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PaymentVoucherController;
 use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionLicenseController;
@@ -60,6 +61,12 @@ Route::middleware('auth')->group(function () {
     Route::resource('pagos', PaymentController::class)
         ->parameters(['pagos' => 'payment'])
         ->except(['show']);
+
+    Route::get('/comprobantes/pagos/{payment}', [PaymentVoucherController::class, 'payment'])
+        ->name('comprobantes.pagos.show');
+
+    Route::get('/comprobantes/suscripciones/{subscription}/recordatorio', [PaymentVoucherController::class, 'reminder'])
+        ->name('comprobantes.suscripciones.recordatorio');
 
     Route::resource('costos', CostItemController::class)
         ->parameters(['costos' => 'costItem'])
