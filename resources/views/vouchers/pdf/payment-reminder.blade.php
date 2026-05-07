@@ -135,7 +135,7 @@
         </table>
 
         <div class="foot">
-            Este documento funciona como recordatorio de pago. Una vez registrado el pago, emite el comprobante final para dejar evidencia de cobro.
+            Este documento es un recordatorio de pago. Cuando el pago sea confirmado, se emitira el comprobante final.
         </div>
     </section>
 </body>

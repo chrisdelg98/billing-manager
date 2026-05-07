@@ -19,19 +19,22 @@ class PaymentVoucherController extends Controller
             'subscription:id,name,billing_cycle,next_renewal_at',
         ]);
 
-        $voucherNumber = sprintf('PAGO-%06d', (int) $payment->id);
+        $isPending = $payment->isPending();
+        $voucherNumber = sprintf($isPending ? 'ORD-%06d' : 'PAGO-%06d', (int) $payment->id);
 
         if ($request->string('format')->toString() === 'pdf') {
-            $html = view('vouchers.pdf.payment-receipt', compact('payment', 'voucherNumber'))->render();
+            $html = view('vouchers.pdf.payment-receipt', compact('payment', 'voucherNumber', 'isPending'))->render();
+
+            $filePrefix = $isPending ? 'orden-pago' : 'comprobante';
 
             return $this->renderPdf(
                 $html,
                 $this->paymentPaperSize($payment),
-                "comprobante-{$voucherNumber}.pdf"
+                "{$filePrefix}-{$voucherNumber}.pdf"
             );
         }
 
-        return view('vouchers.payment-receipt', compact('payment', 'voucherNumber'));
+        return view('vouchers.payment-receipt', compact('payment', 'voucherNumber', 'isPending'));
     }
 
     public function reminder(Request $request, Subscription $subscription): View|Response

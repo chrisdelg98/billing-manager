@@ -19,10 +19,64 @@ class PaymentController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Payment::query()->with(['service', 'subscription'])->latest('paid_at');
+        $query = Payment::query()->with(['service', 'subscription'])->latest('id');
+
+        if ($request->filled('q')) {
+            $search = trim((string) $request->string('q'));
+
+            $query->where(function ($innerQuery) use ($search): void {
+                $innerQuery
+                    ->where('reference', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%")
+                    ->orWhereHas('service', fn ($serviceQuery) => $serviceQuery->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('subscription', fn ($subscriptionQuery) => $subscriptionQuery->where('name', 'like', "%{$search}%"));
+            });
+        }
 
         if ($request->filled('service_id')) {
             $query->where('service_id', (int) $request->integer('service_id'));
+        }
+
+        $status = (string) $request->string('status');
+        if (in_array($status, [Payment::STATUS_PENDING, Payment::STATUS_CONFIRMED], true)) {
+            $query->where('status', $status);
+        }
+
+        $method = (string) $request->string('method');
+        if (in_array($method, [Payment::METHOD_TRANSFER, Payment::METHOD_CASH, Payment::METHOD_PAYPAL, Payment::METHOD_OTHER], true)) {
+            $query->where('method', $method);
+        }
+
+        $subscriptionScope = (string) $request->string('subscription_scope');
+        if ($subscriptionScope === 'with_subscription') {
+            $query->whereNotNull('subscription_id');
+        }
+
+        if ($subscriptionScope === 'without_subscription') {
+            $query->whereNull('subscription_id');
+        }
+
+        if ($request->filled('paid_from')) {
+            $query->whereDate('paid_at', '>=', (string) $request->input('paid_from'));
+        }
+
+        if ($request->filled('paid_to')) {
+            $query->whereDate('paid_at', '<=', (string) $request->input('paid_to'));
+        }
+
+        $paidWindow = (string) $request->string('paid_window');
+        if ($paidWindow !== '') {
+            $today = now()->startOfDay();
+
+            match ($paidWindow) {
+                'today' => $query->whereDate('paid_at', $today->toDateString()),
+                'last_7' => $query->whereDate('paid_at', '>=', $today->copy()->subDays(6)->toDateString()),
+                'last_30' => $query->whereDate('paid_at', '>=', $today->copy()->subDays(29)->toDateString()),
+                'this_month' => $query
+                    ->whereDate('paid_at', '>=', $today->copy()->startOfMonth()->toDateString())
+                    ->whereDate('paid_at', '<=', $today->copy()->endOfMonth()->toDateString()),
+                default => null,
+            };
         }
 
         $payments = $query->paginate(12)->withQueryString();
@@ -101,8 +155,13 @@ class PaymentController extends Controller
 
     public function update(Request $request, Payment $payment): RedirectResponse
     {
+        $previousStatus = (string) $payment->status;
         $data = $this->validatedData($request);
         $payment->update($data);
+
+        if ($previousStatus !== Payment::STATUS_CONFIRMED && (string) $payment->status === Payment::STATUS_CONFIRMED) {
+            $this->advanceSubscriptionRenewal($payment->fresh());
+        }
 
         AuditLogger::log('updated', 'payment', $payment->id, ['amount' => $payment->amount]);
 
@@ -129,6 +188,7 @@ class PaymentController extends Controller
         $data = $request->validate([
             'service_id' => ['required', 'exists:services,id'],
             'subscription_id' => ['nullable', 'exists:subscriptions,id'],
+            'status' => ['nullable', 'in:'.Payment::STATUS_PENDING.','.Payment::STATUS_CONFIRMED],
             'paid_at' => ['required', 'date'],
             'base_amount' => ['nullable', 'numeric', 'min:0'],
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -142,12 +202,24 @@ class PaymentController extends Controller
                     ->where('catalog_type', ServiceCatalogOption::TYPE_CURRENCY)
                     ->where('is_active', true)),
             ],
-            'method' => ['required', 'in:transfer,cash,other'],
+            'method' => ['nullable', 'in:transfer,cash,paypal,other'],
             'reference' => ['nullable', 'string', 'max:120'],
             'notes' => ['nullable', 'string'],
         ]);
 
+        $data['status'] = (string) ($data['status'] ?? Payment::STATUS_CONFIRMED);
         $data['currency'] = strtoupper((string) $data['currency']);
+
+        if ($data['status'] === Payment::STATUS_PENDING) {
+            $data['method'] = 'other';
+        }
+
+        if ($data['status'] === Payment::STATUS_CONFIRMED && empty($data['method'])) {
+            throw ValidationException::withMessages([
+                'method' => 'Selecciona el metodo de pago al confirmar el cobro.',
+            ]);
+        }
+
         $subscription = null;
 
         if (! empty($data['subscription_id'])) {
@@ -201,6 +273,10 @@ class PaymentController extends Controller
 
     private function advanceSubscriptionRenewal(Payment $payment): void
     {
+        if ((string) $payment->status !== Payment::STATUS_CONFIRMED) {
+            return;
+        }
+
         if (! $payment->subscription_id) {
             return;
         }

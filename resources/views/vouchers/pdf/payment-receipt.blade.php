@@ -39,13 +39,22 @@
         .status {
             margin-top: 8px;
             display: inline-block;
-            border: 1px solid #86efac;
-            background: #f0fdf4;
-            color: #166534;
             border-radius: 999px;
             padding: 3px 8px;
             font-size: 10px;
             font-weight: 700;
+        }
+
+        .status.pending {
+            border: 1px solid #fcd34d;
+            background: #fffbeb;
+            color: #92400e;
+        }
+
+        .status.confirmed {
+            border: 1px solid #86efac;
+            background: #f0fdf4;
+            color: #166534;
         }
 
         .table {
@@ -86,9 +95,9 @@
 <body>
     <section class="voucher">
         <header class="header">
-            <h1 class="title">Comprobante de pago</h1>
-            <div class="meta">Comprobante: {{ $voucherNumber }} | Generado: {{ now()->format('Y-m-d H:i') }}</div>
-            <span class="status">PAGO CONFIRMADO</span>
+            <h1 class="title">{{ $isPending ? 'Orden de pago' : 'Comprobante de pago' }}</h1>
+            <div class="meta">{{ $isPending ? 'Orden' : 'Comprobante' }}: {{ $voucherNumber }} | Generado: {{ now()->format('Y-m-d H:i') }}</div>
+            <span class="status {{ $isPending ? 'pending' : 'confirmed' }}">{{ $isPending ? 'PAGO PENDIENTE' : 'PAGO CONFIRMADO' }}</span>
         </header>
 
         <table class="table">
@@ -104,7 +113,7 @@
             </tr>
             <tr>
                 <td>
-                    <div class="label">Fecha de pago</div>
+                    <div class="label">{{ $isPending ? 'Fecha de orden' : 'Fecha de pago' }}</div>
                     <div class="value">{{ $payment->paid_at?->format('Y-m-d') ?: '-' }}</div>
                 </td>
                 <td>
@@ -115,7 +124,7 @@
             <tr>
                 <td>
                     <div class="label">Metodo</div>
-                    <div class="value">{{ ucfirst($payment->method) }}</div>
+                    <div class="value">{{ $isPending ? 'Por confirmar' : $payment->methodLabel() }}</div>
                 </td>
                 <td>
                     <div class="label">Referencia</div>

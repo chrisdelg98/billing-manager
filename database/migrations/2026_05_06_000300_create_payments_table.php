@@ -18,7 +18,7 @@ return new class extends Migration
             $table->date('paid_at');
             $table->decimal('amount', 12, 2);
             $table->char('currency', 3)->default('USD');
-            $table->enum('method', ['transfer', 'cash', 'other'])->default('transfer');
+            $table->enum('method', ['transfer', 'cash', 'paypal', 'other'])->default('transfer');
             $table->string('reference')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();

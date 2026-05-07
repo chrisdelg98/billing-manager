@@ -84,13 +84,61 @@ class PaymentVouchersTest extends TestCase
             ->assertSee('Voucher de recordatorio de pago')
             ->assertSee('PENDIENTE DE PAGO')
             ->assertSee('CLINEXUS CORE ANUAL')
-            ->assertSee('300.00 USD');
+            ->assertSee('300.00 USD')
+            ->assertSee('Este documento es un recordatorio de pago. Cuando el pago sea confirmado, se emitira el comprobante final.');
 
         $this->actingAs($user)
             ->get(route('comprobantes.suscripciones.recordatorio', ['subscription' => $subscription, 'format' => 'pdf']))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')
             ->assertHeader('Content-Disposition', 'attachment; filename="recordatorio-'.sprintf('RMD-%06d', (int) $subscription->id).'.pdf"');
+    }
+
+    public function test_authenticated_user_can_open_pending_payment_order_voucher(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE',
+            'billing_cycle' => 'monthly',
+            'amount' => 100,
+            'currency' => 'USD',
+            'next_renewal_at' => now()->addMonth()->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $payment = Payment::query()->create([
+            'service_id' => $service->id,
+            'subscription_id' => $subscription->id,
+            'status' => 'pending',
+            'paid_at' => now()->toDateString(),
+            'covered_period_start' => now()->startOfMonth()->toDateString(),
+            'amount' => 90,
+            'currency' => 'USD',
+            'method' => 'other',
+            'reference' => 'ORD-001',
+            'notes' => 'Orden con descuento aplicado',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('comprobantes.pagos.show', $payment))
+            ->assertOk()
+            ->assertSee('Orden de pago')
+            ->assertSee('ORD-')
+            ->assertSee('PAGO PENDIENTE')
+            ->assertSee('Por confirmar');
+
+        $this->actingAs($user)
+            ->get(route('comprobantes.pagos.show', ['payment' => $payment, 'format' => 'pdf']))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeader('Content-Disposition', 'attachment; filename="orden-pago-'.sprintf('ORD-%06d', (int) $payment->id).'.pdf"');
     }
 
     public function test_guest_cannot_access_voucher_routes(): void

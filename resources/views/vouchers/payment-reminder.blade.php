@@ -209,7 +209,7 @@
             </div>
 
             <div class="foot">
-                Este voucher funciona como recordatorio interno/comercial. Al registrar el pago, puedes emitir el comprobante de pago definitivo desde la seccion Pagos.
+                Este documento es un recordatorio de pago. Cuando el pago sea confirmado, se emitira el comprobante final.
             </div>
         </section>
     </div>

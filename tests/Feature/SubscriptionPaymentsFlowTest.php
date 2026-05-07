@@ -115,6 +115,145 @@ class SubscriptionPaymentsFlowTest extends TestCase
         $this->assertStringContainsString('Descuento aplicado', (string) $payment->notes);
     }
 
+    public function test_payment_store_accepts_paypal_method(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE',
+            'billing_cycle' => 'monthly',
+            'amount' => 100,
+            'currency' => 'USD',
+            'next_renewal_at' => '2026-06-30',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('pagos.store'), [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+                'status' => 'confirmed',
+                'paid_at' => '2026-06-12',
+                'base_amount' => 100,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'amount' => 100,
+                'currency' => 'USD',
+                'method' => 'paypal',
+                'reference' => 'PAYPAL-001',
+            ])
+            ->assertRedirect(route('pagos.index'));
+
+        $payment = Payment::query()->firstOrFail();
+
+        $this->assertSame('confirmed', $payment->status);
+        $this->assertSame('paypal', $payment->method);
+        $this->assertEquals('2026-07-30', $subscription->fresh()->next_renewal_at?->toDateString());
+    }
+
+    public function test_payment_store_allows_pending_order_with_discount_without_advancing_renewal(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE',
+            'billing_cycle' => 'monthly',
+            'amount' => 100,
+            'currency' => 'USD',
+            'next_renewal_at' => '2026-06-30',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('pagos.store'), [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+                'status' => 'pending',
+                'paid_at' => '2026-06-10',
+                'base_amount' => 100,
+                'discount_percent' => 10,
+                'discount_amount' => 0,
+                'amount' => 100,
+                'currency' => 'USD',
+                'reference' => 'ORD-DISC-001',
+                'notes' => 'Orden con descuento',
+            ])
+            ->assertRedirect(route('pagos.index'));
+
+        $payment = Payment::query()->firstOrFail();
+
+        $this->assertSame('pending', $payment->status);
+        $this->assertSame('other', $payment->method);
+        $this->assertEquals('90.00', (string) $payment->amount);
+        $this->assertEquals('2026-06-30', $subscription->fresh()->next_renewal_at?->toDateString());
+    }
+
+    public function test_pending_payment_can_be_confirmed_later_and_then_advances_renewal(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE',
+            'billing_cycle' => 'monthly',
+            'amount' => 100,
+            'currency' => 'USD',
+            'next_renewal_at' => '2026-06-30',
+            'is_active' => true,
+        ]);
+
+        $payment = Payment::query()->create([
+            'service_id' => $service->id,
+            'subscription_id' => $subscription->id,
+            'status' => 'pending',
+            'paid_at' => '2026-06-10',
+            'covered_period_start' => '2026-06-01',
+            'amount' => 100,
+            'currency' => 'USD',
+            'method' => 'other',
+            'reference' => 'ORD-TO-CONFIRM',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('pagos.update', $payment), [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+                'status' => 'confirmed',
+                'paid_at' => '2026-06-12',
+                'base_amount' => 100,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'amount' => 100,
+                'currency' => 'USD',
+                'method' => 'transfer',
+                'reference' => 'PAY-001',
+            ])
+            ->assertRedirect(route('pagos.index'));
+
+        $payment = $payment->fresh();
+
+        $this->assertSame('confirmed', $payment->status);
+        $this->assertSame('transfer', $payment->method);
+        $this->assertEquals('2026-07-30', $subscription->fresh()->next_renewal_at?->toDateString());
+    }
+
     public function test_payment_store_advances_monthly_subscription_next_renewal(): void
     {
         $user = User::factory()->create();

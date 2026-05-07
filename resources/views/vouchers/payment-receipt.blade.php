@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Comprobante de pago</title>
+    <title>{{ $isPending ? 'Orden de pago' : 'Comprobante de pago' }}</title>
     <style>
         :root {
             color-scheme: light;
@@ -83,14 +83,23 @@
         }
 
         .badge {
-            border: 1px solid #86efac;
-            color: #166534;
-            background: #f0fdf4;
             border-radius: 999px;
             padding: 6px 10px;
             font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
+        }
+
+        .badge.pending {
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            background: #fffbeb;
+        }
+
+        .badge.confirmed {
+            border: 1px solid #86efac;
+            color: #166534;
+            background: #f0fdf4;
         }
 
         .grid {
@@ -153,17 +162,17 @@
             <a href="{{ route('pagos.index') }}" class="btn">Volver a pagos</a>
             <div style="display: flex; gap: 8px;">
                 <a href="{{ route('comprobantes.pagos.show', ['payment' => $payment, 'format' => 'pdf']) }}" class="btn">Descargar PDF</a>
-                <button type="button" class="btn btn-primary" onclick="window.print()">Imprimir comprobante</button>
+                <button type="button" class="btn btn-primary" onclick="window.print()">{{ $isPending ? 'Imprimir orden' : 'Imprimir comprobante' }}</button>
             </div>
         </div>
 
         <section class="card">
             <header class="header">
                 <div>
-                    <h1 class="title">Comprobante de pago</h1>
-                    <div class="meta">Comprobante: {{ $voucherNumber }} | Generado: {{ now()->format('Y-m-d H:i') }}</div>
+                    <h1 class="title">{{ $isPending ? 'Orden de pago' : 'Comprobante de pago' }}</h1>
+                    <div class="meta">{{ $isPending ? 'Orden' : 'Comprobante' }}: {{ $voucherNumber }} | Generado: {{ now()->format('Y-m-d H:i') }}</div>
                 </div>
-                <span class="badge">PAGO CONFIRMADO</span>
+                <span class="badge {{ $isPending ? 'pending' : 'confirmed' }}">{{ $isPending ? 'PAGO PENDIENTE' : 'PAGO CONFIRMADO' }}</span>
             </header>
 
             <div class="grid">
@@ -178,7 +187,7 @@
                 </div>
 
                 <div class="item">
-                    <div class="label">Fecha de pago</div>
+                    <div class="label">{{ $isPending ? 'Fecha de orden' : 'Fecha de pago' }}</div>
                     <div class="value">{{ $payment->paid_at?->format('Y-m-d') ?: '-' }}</div>
                 </div>
 
@@ -189,7 +198,7 @@
 
                 <div class="item">
                     <div class="label">Metodo</div>
-                    <div class="value">{{ ucfirst($payment->method) }}</div>
+                    <div class="value">{{ $isPending ? 'Por confirmar' : $payment->methodLabel() }}</div>
                 </div>
 
                 <div class="item">

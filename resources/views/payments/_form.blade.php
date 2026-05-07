@@ -13,6 +13,8 @@
 
     $seedServiceId = (string) old('service_id', $payment->service_id ?? ($defaultServiceId ?? ''));
     $seedSubscriptionId = (string) old('subscription_id', $payment->subscription_id ?? ($defaultSubscriptionId ?? ''));
+    $seedStatus = (string) old('status', $payment->status ?? 'confirmed');
+    $seedMethod = (string) old('method', $payment->method ?? ($seedStatus === 'pending' ? 'other' : 'transfer'));
     $seedCurrency = old('currency', $payment->currency ?? ($defaultCurrency ?? 'USD'));
     $seedPaidAt = old('paid_at', isset($payment) && $payment->paid_at ? $payment->paid_at->toDateString() : now()->toDateString());
     $seedBaseAmount = old('base_amount', $defaultBaseAmount ?? null);
@@ -45,7 +47,9 @@
     x-data="{
         serviceId: @js((string) $seedServiceId),
         subscriptionId: @js((string) $seedSubscriptionId),
+        status: @js((string) $seedStatus),
         paidAt: @js((string) $seedPaidAt),
+        method: @js((string) $seedMethod),
         baseAmount: Number(@js((float) $seedBaseAmount)),
         amount: Number(@js((float) $seedAmount)),
         discountPercent: Number(@js((float) $seedDiscountPercent)),
@@ -131,10 +135,17 @@
                 this.subscriptionId = '';
             }
         },
+        onStatusChange() {
+            if (this.status === 'pending') {
+                this.method = 'other';
+            }
+        },
         init() {
             if (this.subscriptionId) {
                 this.syncSubscription(false);
             }
+
+            this.onStatusChange();
         }
     }"
 >
@@ -165,8 +176,18 @@
     </div>
 
     <div>
-        <label for="paid_at" class="mb-1 block text-sm font-medium text-slate-700">Fecha de pago</label>
+        <label for="status" class="mb-1 block text-sm font-medium text-slate-700">Estado</label>
+        <select id="status" name="status" x-model="status" x-on:change="onStatusChange" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+            <option value="pending">Pendiente (orden de pago)</option>
+            <option value="confirmed">Confirmado (pagado)</option>
+        </select>
+        @error('status')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
+    <div>
+        <label for="paid_at" class="mb-1 block text-sm font-medium text-slate-700" x-text="status === 'pending' ? 'Fecha de orden' : 'Fecha de pago'"></label>
         <input id="paid_at" name="paid_at" type="date" x-model="paidAt" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <p class="mt-1 text-xs text-slate-500" x-show="status === 'pending'">Esta fecha indica cuando se emitio la orden de pago.</p>
         @error('paid_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
@@ -208,16 +229,16 @@
 
     <div>
         <label for="method" class="mb-1 block text-sm font-medium text-slate-700">Metodo</label>
-        @php($method = old('method', $payment->method ?? 'transfer'))
-        <select id="method" name="method" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-            <option value="transfer" @selected($method === 'transfer')>Transferencia</option>
-            <option value="cash" @selected($method === 'cash')>Efectivo</option>
-            <option value="other" @selected($method === 'other')>Otro</option>
+        <select id="method" name="method" x-model="method" x-bind:required="status === 'confirmed'" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+            <option value="other">Por confirmar</option>
+            <option value="transfer">Transferencia</option>
+            <option value="cash">Efectivo</option>
+            <option value="paypal">PayPal</option>
         </select>
         @error('method')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
-    <div class="">
+    <div class="col-span-2">
         <label for="reference" class="mb-1 block text-sm font-medium text-slate-700">Referencia</label>
         <input id="reference" name="reference" type="text" value="{{ old('reference', $payment->reference ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
         @error('reference')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
