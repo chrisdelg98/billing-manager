@@ -76,7 +76,7 @@
 
             <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
                 <div class="border-b border-slate-200 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-slate-900">Costos activos por categoria</h3>
+                    <h3 class="text-sm font-semibold text-slate-900">Costos mensuales proyectados por categoria</h3>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200 text-sm">

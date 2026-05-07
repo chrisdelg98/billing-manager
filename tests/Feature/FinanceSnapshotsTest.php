@@ -129,4 +129,26 @@ class FinanceSnapshotsTest extends TestCase
             'net_margin' => '-10.00',
         ]);
     }
+
+    public function test_custom_cost_interval_is_prorated_in_finance_projection(): void
+    {
+        $user = User::factory()->create();
+
+        CostItem::query()->create([
+            'name' => 'Web Hosting 4y',
+            'category' => 'hosting',
+            'cost_type' => 'shared',
+            'amount' => 400,
+            'currency' => 'USD',
+            'billing_cycle' => 'custom',
+            'billing_interval_months' => 48,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('finanzas.index', ['period' => now()->format('Y-m')]))
+            ->assertOk()
+            ->assertSee('8.33 USD')
+            ->assertDontSee('400.00 USD');
+    }
 }

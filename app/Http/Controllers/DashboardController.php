@@ -24,12 +24,7 @@ class DashboardController extends Controller
         $costProjectionMonth = (float) CostItem::query()
             ->where('is_active', true)
             ->get()
-            ->sum(function (CostItem $cost) {
-                return match ($cost->billing_cycle) {
-                    'yearly' => (float) $cost->amount / 12,
-                    default => (float) $cost->amount,
-                };
-            });
+            ->sum(fn (CostItem $cost) => $cost->monthlyAmount());
 
         $netProjectionMonth = $incomeThisMonth - $costProjectionMonth;
 

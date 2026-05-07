@@ -7,7 +7,7 @@
         <div class="rounded-xl border border-slate-200 bg-white p-5">
             <p class="text-sm text-slate-500">Costo compartido</p>
             <h3 class="mt-1 text-lg font-semibold text-slate-900">{{ $costItem->name }}</h3>
-            <p class="mt-2 text-sm text-slate-700">Monto mensual estimado: {{ number_format($costItem->billing_cycle === 'yearly' ? ((float) $costItem->amount / 12) : (float) $costItem->amount, 2) }} {{ $costItem->currency }}</p>
+            <p class="mt-2 text-sm text-slate-700">Monto mensual estimado: {{ number_format($costItem->monthlyAmount(), 2) }} {{ $costItem->currency }}</p>
         </div>
 
         <form method="POST" action="{{ route('costos.asignaciones.update', $costItem) }}" x-data="{ allocationMode: '{{ $allocationMode }}' }" class="rounded-xl border border-slate-200 bg-white p-5">

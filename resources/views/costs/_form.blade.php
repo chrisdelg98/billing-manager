@@ -1,6 +1,19 @@
 @csrf
 
-<div class="grid gap-5 sm:grid-cols-2">
+@php
+    $billingCycle = old('billing_cycle', $costItem->billing_cycle ?? 'monthly');
+    $intervalMonths = (int) old('billing_interval_months', $costItem->billing_interval_months ?? ($billingCycle === 'yearly' ? 12 : 1));
+    $intervalMonths = max($intervalMonths, 1);
+    $defaultCustomUnit = $intervalMonths % 12 === 0 ? 'year' : 'month';
+    $customEveryBase = $defaultCustomUnit === 'year' ? max((int) ($intervalMonths / 12), 1) : $intervalMonths;
+    $customEvery = (int) old('billing_custom_every', $customEveryBase);
+    $customUnit = old('billing_custom_unit', $defaultCustomUnit);
+@endphp
+
+<div
+    x-data="{ billingCycle: @js($billingCycle), customEvery: {{ max($customEvery, 1) }}, customUnit: @js($customUnit) }"
+    class="grid gap-5 sm:grid-cols-2"
+>
     <div class="sm:col-span-2">
         <label for="name" class="mb-1 block text-sm font-medium text-slate-700">Nombre del costo</label>
         <input id="name" name="name" type="text" value="{{ old('name', $costItem->name ?? '') }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
@@ -43,14 +56,44 @@
 
     <div>
         <label for="billing_cycle" class="mb-1 block text-sm font-medium text-slate-700">Ciclo</label>
-        @php($billingCycle = old('billing_cycle', $costItem->billing_cycle ?? 'monthly'))
-        <select id="billing_cycle" name="billing_cycle" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <select id="billing_cycle" name="billing_cycle" x-model="billingCycle" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
             <option value="monthly" @selected($billingCycle === 'monthly')>Mensual</option>
             <option value="yearly" @selected($billingCycle === 'yearly')>Anual</option>
             <option value="custom" @selected($billingCycle === 'custom')>Personalizado</option>
         </select>
+        <p class="mt-1 text-xs text-slate-500">Mensual = cada 1 mes, Anual = cada 12 meses.</p>
         @error('billing_cycle')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
+
+    <div x-show="billingCycle === 'custom'" x-cloak class="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <p class="mb-3 text-sm font-medium text-slate-700">Frecuencia personalizada</p>
+
+        <div class="grid gap-3 sm:grid-cols-[auto_auto] sm:items-end">
+            <div>
+                <label for="billing_custom_every" class="mb-1 block text-sm font-medium text-slate-700">Se cobra cada</label>
+                <input id="billing_custom_every" name="billing_custom_every" type="number" min="1" x-model.number="customEvery" class="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+            </div>
+
+            <div>
+                <label for="billing_custom_unit" class="mb-1 block text-sm font-medium text-slate-700">Unidad</label>
+                <select id="billing_custom_unit" name="billing_custom_unit" x-model="customUnit" class="w-36 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                    <option value="month">Meses</option>
+                    <option value="year">Anios</option>
+                </select>
+            </div>
+        </div>
+
+        <p class="mt-2 text-xs text-slate-500">Ejemplo: 4 anios = se cobra cada 48 meses.</p>
+        @error('billing_interval_months')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+        @error('billing_custom_every')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+        @error('billing_custom_unit')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
+    <input
+        type="hidden"
+        name="billing_interval_months"
+        x-bind:value="billingCycle === 'monthly' ? 1 : (billingCycle === 'yearly' ? 12 : (customUnit === 'year' ? (customEvery * 12) : customEvery))"
+    >
 
     <div>
         <label for="next_renewal_at" class="mb-1 block text-sm font-medium text-slate-700">Proxima renovacion</label>

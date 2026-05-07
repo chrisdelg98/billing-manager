@@ -41,7 +41,7 @@
                                 <td class="px-4 py-3 text-slate-700">{{ ucfirst($costItem->category) }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ ucfirst($costItem->cost_type) }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ number_format((float) $costItem->amount, 2) }} {{ $costItem->currency }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ ucfirst($costItem->billing_cycle) }}</td>
+                                <td class="px-4 py-3 text-slate-700">{{ $costItem->billingFrequencyLabel() }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $costItem->next_renewal_at?->format('Y-m-d') ?: '-' }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $costItem->is_active ? 'Activo' : 'Inactivo' }}</td>
                                 <td class="px-4 py-3">

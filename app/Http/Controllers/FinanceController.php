@@ -12,7 +12,6 @@ use App\Support\FinanceSnapshotService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class FinanceController extends Controller
@@ -47,12 +46,7 @@ class FinanceController extends Controller
         $projectedCosts = (float) CostItem::query()
             ->where('is_active', true)
             ->get()
-            ->sum(function (CostItem $cost) {
-                return match ($cost->billing_cycle) {
-                    'yearly' => (float) $cost->amount / 12,
-                    default => (float) $cost->amount,
-                };
-            });
+            ->sum(fn (CostItem $cost) => $cost->monthlyAmount());
 
         $netProjected = $projectedRecurringIncome - $projectedCosts;
         $realVsCost = $incomeReal - $projectedCosts;
@@ -70,11 +64,15 @@ class FinanceController extends Controller
             ->get();
 
         $costByCategory = CostItem::query()
-            ->select('category', DB::raw('SUM(amount) as amount_total'))
             ->where('is_active', true)
+            ->get()
             ->groupBy('category')
-            ->orderByDesc('amount_total')
-            ->get();
+            ->map(fn ($items, $category) => (object) [
+                'category' => $category,
+                'amount_total' => $items->sum(fn (CostItem $cost) => $cost->monthlyAmount()),
+            ])
+            ->sortByDesc('amount_total')
+            ->values();
 
         $currentSnapshots = MonthlySnapshot::query()
             ->with('service:id,name')

@@ -82,7 +82,7 @@ class FinanceSnapshotService
                 continue;
             }
 
-            $amount = $this->toMonthlyAmount((float) $costItem->amount, (string) $costItem->billing_cycle);
+            $amount = $costItem->monthlyAmount();
 
             if ($amount <= 0) {
                 continue;
@@ -129,14 +129,6 @@ class FinanceSnapshotService
             $allocatedTotals[$allocation->service_id][$bucket] =
                 ($allocatedTotals[$allocation->service_id][$bucket] ?? 0) + $share;
         }
-    }
-
-    private function toMonthlyAmount(float $amount, string $billingCycle): float
-    {
-        return match ($billingCycle) {
-            'yearly' => $amount / 12,
-            default => $amount,
-        };
     }
 
     private function resolvePeriod(string $period): array

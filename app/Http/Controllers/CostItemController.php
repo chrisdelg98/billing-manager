@@ -6,6 +6,7 @@ use App\Models\CostItem;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CostItemController extends Controller
@@ -70,6 +71,9 @@ class CostItemController extends Controller
             'amount' => ['required', 'numeric', 'min:0'],
             'currency' => ['required', 'string', 'size:3'],
             'billing_cycle' => ['required', 'in:monthly,yearly,custom'],
+            'billing_interval_months' => ['nullable', 'integer', 'min:1', 'max:600'],
+            'billing_custom_every' => ['nullable', 'integer', 'min:1', 'max:120'],
+            'billing_custom_unit' => ['nullable', 'in:month,year'],
             'next_renewal_at' => ['nullable', 'date'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -77,6 +81,37 @@ class CostItemController extends Controller
         $data['currency'] = strtoupper((string) $data['currency']);
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
 
+        $data['billing_interval_months'] = $this->resolvedBillingIntervalMonths($data);
+        unset($data['billing_custom_every'], $data['billing_custom_unit']);
+
         return $data;
+    }
+
+    private function resolvedBillingIntervalMonths(array $data): int
+    {
+        if ($data['billing_cycle'] === 'monthly') {
+            return 1;
+        }
+
+        if ($data['billing_cycle'] === 'yearly') {
+            return 12;
+        }
+
+        $customEvery = (int) ($data['billing_custom_every'] ?? 0);
+        $customUnit = (string) ($data['billing_custom_unit'] ?? 'month');
+
+        if ($customEvery > 0) {
+            return $customUnit === 'year' ? $customEvery * 12 : $customEvery;
+        }
+
+        $intervalMonths = (int) ($data['billing_interval_months'] ?? 0);
+
+        if ($intervalMonths < 1) {
+            throw ValidationException::withMessages([
+                'billing_interval_months' => 'Define cada cuantos meses se cobra este costo personalizado.',
+            ]);
+        }
+
+        return $intervalMonths;
     }
 }
