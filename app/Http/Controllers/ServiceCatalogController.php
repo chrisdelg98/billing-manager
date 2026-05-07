@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ServiceCatalogOption;
 use App\Support\AuditLogger;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -72,6 +74,52 @@ class ServiceCatalogController extends Controller
         ]);
 
         return redirect()->route('catalogos.servicios.index')->with('status', 'Elemento de catalogo eliminado correctamente.');
+    }
+
+    public function reorder(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'catalog_type' => ['required', 'in:'.ServiceCatalogOption::TYPE_SERVICE.','.ServiceCatalogOption::TYPE_PROVIDER],
+            'ordered_ids' => ['required', 'array', 'min:1'],
+            'ordered_ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+
+        $existingIds = ServiceCatalogOption::query()
+            ->where('catalog_type', $data['catalog_type'])
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        $orderedIds = collect($data['ordered_ids'])
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($existingIds->count() !== $orderedIds->count() || $existingIds->diff($orderedIds)->isNotEmpty()) {
+            return response()->json([
+                'message' => 'El orden recibido no coincide con los elementos del catalogo.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($data, $orderedIds): void {
+            foreach ($orderedIds as $index => $optionId) {
+                ServiceCatalogOption::query()
+                    ->where('catalog_type', $data['catalog_type'])
+                    ->whereKey($optionId)
+                    ->update([
+                        'sort_order' => ($index + 1) * 10,
+                        'updated_at' => now(),
+                    ]);
+            }
+        });
+
+        AuditLogger::log('reordered', 'service_catalog_option', null, [
+            'catalog_type' => $data['catalog_type'],
+            'items_count' => $orderedIds->count(),
+        ]);
+
+        return response()->json([
+            'message' => 'Orden actualizado correctamente.',
+        ]);
     }
 
     private function validatedData(Request $request, ?string $forceCatalogType = null): array

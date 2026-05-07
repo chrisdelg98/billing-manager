@@ -28,6 +28,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/catalogos/servicios', [ServiceCatalogController::class, 'store'])
         ->name('catalogos.servicios.store');
 
+    Route::post('/catalogos/servicios/reordenar', [ServiceCatalogController::class, 'reorder'])
+        ->name('catalogos.servicios.reorder');
+
     Route::put('/catalogos/servicios/{catalogoServicio}', [ServiceCatalogController::class, 'update'])
         ->name('catalogos.servicios.update');
 

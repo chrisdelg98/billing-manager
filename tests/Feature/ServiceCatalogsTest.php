@@ -51,4 +51,55 @@ class ServiceCatalogsTest extends TestCase
             ->assertSee('API')
             ->assertSee('Cloudflare');
     }
+
+    public function test_user_can_reorder_catalog_items(): void
+    {
+        $user = User::factory()->create();
+
+        $itemA = ServiceCatalogOption::query()->create([
+            'catalog_type' => ServiceCatalogOption::TYPE_SERVICE,
+            'name' => 'Tipo Zeta',
+            'sort_order' => 500,
+            'is_active' => true,
+        ]);
+
+        $itemB = ServiceCatalogOption::query()->create([
+            'catalog_type' => ServiceCatalogOption::TYPE_SERVICE,
+            'name' => 'Tipo Alfa',
+            'sort_order' => 510,
+            'is_active' => true,
+        ]);
+
+        $orderedIds = ServiceCatalogOption::query()
+            ->where('catalog_type', ServiceCatalogOption::TYPE_SERVICE)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('id')
+            ->all();
+
+        $indexA = array_search($itemA->id, $orderedIds, true);
+        $indexB = array_search($itemB->id, $orderedIds, true);
+
+        [$orderedIds[$indexA], $orderedIds[$indexB]] = [$orderedIds[$indexB], $orderedIds[$indexA]];
+
+        $this->actingAs($user)
+            ->postJson(route('catalogos.servicios.reorder'), [
+                'catalog_type' => ServiceCatalogOption::TYPE_SERVICE,
+                'ordered_ids' => $orderedIds,
+            ])
+            ->assertOk();
+
+        $expectedOrderB = (array_search($itemB->id, $orderedIds, true) + 1) * 10;
+        $expectedOrderA = (array_search($itemA->id, $orderedIds, true) + 1) * 10;
+
+        $this->assertDatabaseHas('service_catalog_options', [
+            'id' => $itemB->id,
+            'sort_order' => $expectedOrderB,
+        ]);
+
+        $this->assertDatabaseHas('service_catalog_options', [
+            'id' => $itemA->id,
+            'sort_order' => $expectedOrderA,
+        ]);
+    }
 }
