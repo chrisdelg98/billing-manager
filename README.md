@@ -61,3 +61,10 @@ Construir una aplicacion interna, simple y funcional, enfocada en:
 ## Licencia
 
 Uso privado/interno.
+
+## Integracion API de licencia
+
+Para integrar otros sistemas con la validacion de licencia, usa estos documentos:
+
+- Guia tecnica de consumo: docs/api-licencia-consumo.md
+- Brief para Codex en sistema consumidor: docs/codex-brief-consumo-api-licencia.md
