@@ -4,6 +4,7 @@
     <div class="sm:col-span-2">
         <label for="name" class="mb-1 block text-sm font-medium text-slate-700">Nombre</label>
         <input id="name" name="name" type="text" value="{{ old('name', $service->name ?? '') }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <p class="mt-1 text-xs text-slate-500">Ejemplo: CLINEXUS. Este campo es el nombre del sistema/servicio final.</p>
         @error('name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
@@ -15,6 +16,7 @@
                 <option value="{{ $option }}"></option>
             @endforeach
         </datalist>
+        <p class="mt-1 text-xs text-slate-500">Categoria del servicio: SaaS, VPS, Dominio, API, etc.</p>
         @error('type')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
@@ -27,6 +29,9 @@
             @endforeach
         </datalist>
         @error('provider')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+        <p class="mt-1 text-xs text-slate-500">
+            Proveedor = empresa donde esta alojado/contratado (Hostinger, AWS, Cloudflare, etc.).
+        </p>
         <p class="mt-1 text-xs text-slate-500">
             Gestiona listas de tipos y proveedores en
             <a href="{{ route('catalogos.servicios.index') }}" class="font-medium text-slate-700 underline decoration-slate-300 underline-offset-2 hover:text-slate-900">Catalogos de servicios</a>.
