@@ -7,6 +7,8 @@
                 'service_id' => (string) $subscriptionOption->service_id,
                 'amount' => (float) $subscriptionOption->amount,
                 'currency' => (string) $subscriptionOption->currency,
+                'billing_cycle' => (string) $subscriptionOption->billing_cycle,
+                'next_renewal_at' => $subscriptionOption->next_renewal_at?->toDateString(),
             ],
         ])
         ->toArray();
@@ -14,6 +16,7 @@
     $seedServiceId = (string) old('service_id', $payment->service_id ?? ($defaultServiceId ?? ''));
     $seedSubscriptionId = (string) old('subscription_id', $payment->subscription_id ?? ($defaultSubscriptionId ?? ''));
     $seedCurrency = old('currency', $payment->currency ?? ($defaultCurrency ?? 'USD'));
+    $seedPaidAt = old('paid_at', isset($payment) && $payment->paid_at ? $payment->paid_at->toDateString() : now()->toDateString());
     $seedBaseAmount = old('base_amount', $defaultBaseAmount ?? null);
 
     if ($seedBaseAmount === null && $seedSubscriptionId !== '' && isset($subscriptionMap[$seedSubscriptionId])) {
@@ -27,6 +30,7 @@
     $seedAmount = old('amount', $payment->amount ?? ($defaultAmount ?? $seedBaseAmount ?? ''));
     $seedDiscountPercent = old('discount_percent', '');
     $seedDiscountAmount = old('discount_amount', '');
+    $seedCoveredPeriod = old('covered_period', isset($payment) && $payment->covered_period_start ? $payment->covered_period_start->format('Y-m') : ($defaultCoveredPeriod ?? substr((string) $seedPaidAt, 0, 7)));
 @endphp
 
 <div
@@ -34,6 +38,8 @@
     x-data="{
         serviceId: @js((string) $seedServiceId),
         subscriptionId: @js((string) $seedSubscriptionId),
+        paidAt: @js((string) $seedPaidAt),
+        coveredPeriod: @js((string) $seedCoveredPeriod),
         baseAmount: Number(@js((float) $seedBaseAmount)),
         amount: Number(@js((float) $seedAmount)),
         discountPercent: Number(@js((float) $seedDiscountPercent)),
@@ -46,6 +52,30 @@
         clamp(value, min, max) {
             return Math.min(Math.max(Number(value), min), max);
         },
+        monthFromDate(value) {
+            if (!value) {
+                return '';
+            }
+
+            return String(value).slice(0, 7);
+        },
+        coverageTimingLabel() {
+            const paidMonth = this.monthFromDate(this.paidAt);
+
+            if (!paidMonth || !this.coveredPeriod) {
+                return '-';
+            }
+
+            if (this.coveredPeriod > paidMonth) {
+                return 'Anticipado';
+            }
+
+            if (this.coveredPeriod < paidMonth) {
+                return 'Atrasado';
+            }
+
+            return 'Al dia';
+        },
         syncSubscription(resetAmounts = true) {
             const meta = this.subscriptions[this.subscriptionId];
 
@@ -56,6 +86,7 @@
             this.serviceId = String(meta.service_id);
             this.currency = String(meta.currency || this.currency);
             this.baseAmount = this.round(meta.amount || 0);
+            this.coveredPeriod = this.monthFromDate(meta.next_renewal_at) || this.monthFromDate(this.paidAt);
 
             if (resetAmounts) {
                 this.discountPercent = 0;
@@ -119,9 +150,16 @@
                 this.subscriptionId = '';
             }
         },
+        onPaidAtChange() {
+            if (!this.coveredPeriod) {
+                this.coveredPeriod = this.monthFromDate(this.paidAt);
+            }
+        },
         init() {
             if (this.subscriptionId) {
                 this.syncSubscription(false);
+            } else if (!this.coveredPeriod) {
+                this.coveredPeriod = this.monthFromDate(this.paidAt);
             }
         }
     }"
@@ -173,8 +211,15 @@
 
     <div>
         <label for="paid_at" class="mb-1 block text-sm font-medium text-slate-700">Fecha de pago</label>
-        <input id="paid_at" name="paid_at" type="date" value="{{ old('paid_at', isset($payment) && $payment->paid_at ? $payment->paid_at->toDateString() : now()->toDateString()) }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <input id="paid_at" name="paid_at" type="date" x-model="paidAt" x-on:change="onPaidAtChange" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
         @error('paid_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
+    <div>
+        <label for="covered_period" class="mb-1 block text-sm font-medium text-slate-700">Periodo que cubre</label>
+        <input id="covered_period" name="covered_period" type="month" x-model="coveredPeriod" x-bind:required="subscriptionId !== ''" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <p class="mt-1 text-xs text-slate-500">Define el periodo real del servicio que estas cobrando (permite anticipos y atrasos).</p>
+        @error('covered_period')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
     <div>
@@ -187,6 +232,7 @@
     <div>
         <label for="currency" class="mb-1 block text-sm font-medium text-slate-700">Moneda</label>
         <input id="currency" name="currency" type="text" maxlength="3" x-model="currency" required class="w-full rounded-lg border border-slate-300 px-3 py-2 uppercase text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <p class="mt-1 text-xs text-slate-500">Tipo de cobro: <span class="font-medium" x-text="coverageTimingLabel()"></span></p>
         @error('currency')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 

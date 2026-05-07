@@ -108,7 +108,6 @@
         <select id="billing_cycle" name="billing_cycle" required x-model="billingCycle" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
             <option value="monthly" @selected($billingCycle === 'monthly')>Mensual</option>
             <option value="yearly" @selected($billingCycle === 'yearly')>Anual</option>
-            <option value="custom" @selected($billingCycle === 'custom')>Personalizado</option>
         </select>
         @error('billing_cycle')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>

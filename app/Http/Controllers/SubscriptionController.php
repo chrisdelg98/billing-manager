@@ -93,7 +93,7 @@ class SubscriptionController extends Controller
         $data = $request->validate([
             'service_id' => ['required', 'exists:services,id'],
             'name' => ['required', 'string', 'max:120'],
-            'billing_cycle' => ['required', 'in:monthly,yearly,custom'],
+            'billing_cycle' => ['required', 'in:monthly,yearly'],
             'amount' => ['required', 'numeric', 'min:0'],
             'currency' => ['required', 'string', 'size:3'],
             'next_renewal_at' => ['nullable', 'date'],

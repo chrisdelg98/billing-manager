@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Models\Service;
 use App\Models\Subscription;
 use App\Support\AuditLogger;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +31,16 @@ class PaymentController extends Controller
     public function create(Request $request): View
     {
         $services = Service::query()->orderBy('name')->get(['id', 'name']);
-        $subscriptions = Subscription::query()->orderBy('name')->get(['id', 'name', 'service_id', 'amount', 'currency', 'notes']);
+        $subscriptions = Subscription::query()->orderBy('name')->get([
+            'id',
+            'name',
+            'service_id',
+            'amount',
+            'currency',
+            'billing_cycle',
+            'next_renewal_at',
+            'notes',
+        ]);
 
         $defaultSubscription = null;
 
@@ -44,6 +54,9 @@ class PaymentController extends Controller
         $defaultAmount = $defaultSubscription ? (float) $defaultSubscription->amount : null;
         $defaultCurrency = $defaultSubscription ? (string) $defaultSubscription->currency : 'USD';
         $defaultNotes = $defaultSubscription ? (string) ($defaultSubscription->notes ?? '') : '';
+        $defaultCoveredPeriod = $defaultSubscription?->next_renewal_at
+            ? $defaultSubscription->next_renewal_at->format('Y-m')
+            : now()->format('Y-m');
 
         return view('payments.create', compact(
             'services',
@@ -54,6 +67,7 @@ class PaymentController extends Controller
             'defaultAmount',
             'defaultCurrency',
             'defaultNotes',
+            'defaultCoveredPeriod',
         ));
     }
 
@@ -72,14 +86,25 @@ class PaymentController extends Controller
     public function edit(Payment $payment): View
     {
         $services = Service::query()->orderBy('name')->get(['id', 'name']);
-        $subscriptions = Subscription::query()->orderBy('name')->get(['id', 'name', 'service_id', 'amount', 'currency']);
+        $subscriptions = Subscription::query()->orderBy('name')->get([
+            'id',
+            'name',
+            'service_id',
+            'amount',
+            'currency',
+            'billing_cycle',
+            'next_renewal_at',
+            'notes',
+        ]);
+        $defaultNotes = (string) ($payment->notes ?? '');
+        $defaultCoveredPeriod = $payment->covered_period_start?->format('Y-m') ?? $payment->paid_at?->format('Y-m') ?? now()->format('Y-m');
 
-        return view('payments.edit', compact('payment', 'services', 'subscriptions'));
+        return view('payments.edit', compact('payment', 'services', 'subscriptions', 'defaultNotes', 'defaultCoveredPeriod'));
     }
 
     public function update(Request $request, Payment $payment): RedirectResponse
     {
-        $data = $this->validatedData($request);
+        $data = $this->validatedData($request, $payment);
         $payment->update($data);
 
         AuditLogger::log('updated', 'payment', $payment->id, ['amount' => $payment->amount]);
@@ -98,12 +123,13 @@ class PaymentController extends Controller
         return redirect()->route('pagos.index')->with('status', 'Pago eliminado correctamente.');
     }
 
-    private function validatedData(Request $request): array
+    private function validatedData(Request $request, ?Payment $payment = null): array
     {
         $data = $request->validate([
             'service_id' => ['required', 'exists:services,id'],
             'subscription_id' => ['nullable', 'exists:subscriptions,id'],
             'paid_at' => ['required', 'date'],
+            'covered_period' => ['nullable', 'date_format:Y-m'],
             'base_amount' => ['nullable', 'numeric', 'min:0'],
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
@@ -125,6 +151,37 @@ class PaymentController extends Controller
             if (! $belongsToService) {
                 throw ValidationException::withMessages([
                     'subscription_id' => 'La suscripcion seleccionada no pertenece al servicio indicado.',
+                ]);
+            }
+
+            if (empty($data['covered_period'])) {
+                throw ValidationException::withMessages([
+                    'covered_period' => 'Indica el periodo que cubre este pago (YYYY-MM).',
+                ]);
+            }
+        }
+
+        $coveredPeriodStart = null;
+
+        if (! empty($data['covered_period'])) {
+            $coveredPeriodStart = Carbon::createFromFormat('Y-m', (string) $data['covered_period'])->startOfMonth();
+            $data['covered_period_start'] = $coveredPeriodStart->toDateString();
+        } else {
+            $data['covered_period_start'] = null;
+        }
+
+        if (! empty($data['subscription_id']) && $coveredPeriodStart) {
+            $duplicateQuery = Payment::query()
+                ->where('subscription_id', $data['subscription_id'])
+                ->whereDate('covered_period_start', $coveredPeriodStart->toDateString());
+
+            if ($payment) {
+                $duplicateQuery->whereKeyNot($payment->id);
+            }
+
+            if ($duplicateQuery->exists()) {
+                throw ValidationException::withMessages([
+                    'covered_period' => 'Ya existe un pago para esta suscripcion y este periodo cubierto.',
                 ]);
             }
         }
@@ -155,7 +212,7 @@ class PaymentController extends Controller
             $data['notes'] = trim(($data['notes'] ?? '')."\n".$discountDetail);
         }
 
-        unset($data['base_amount'], $data['discount_percent'], $data['discount_amount']);
+        unset($data['base_amount'], $data['discount_percent'], $data['discount_amount'], $data['covered_period']);
 
         return $data;
     }
@@ -176,21 +233,22 @@ class PaymentController extends Controller
             return;
         }
 
-        $paymentDate = $payment->paid_at->copy()->startOfDay();
+        $coveredStart = $payment->covered_period_start
+            ? $payment->covered_period_start->copy()->startOfMonth()
+            : $payment->paid_at->copy()->startOfMonth();
+
         $nextRenewal = $subscription->next_renewal_at
             ? $subscription->next_renewal_at->copy()->startOfDay()
-            : $paymentDate->copy();
+            : $coveredStart->copy()->endOfMonth();
 
-        if ($nextRenewal->gt($paymentDate)) {
+        if ($coveredStart->lt($nextRenewal->copy()->startOfMonth())) {
+            return;
+        }
+
+        while ($nextRenewal->copy()->startOfMonth()->lte($coveredStart)) {
             $nextRenewal = $subscription->billing_cycle === 'yearly'
                 ? $nextRenewal->addYearNoOverflow()
                 : $nextRenewal->addMonthNoOverflow();
-        } else {
-            do {
-                $nextRenewal = $subscription->billing_cycle === 'yearly'
-                    ? $nextRenewal->addYearNoOverflow()
-                    : $nextRenewal->addMonthNoOverflow();
-            } while ($nextRenewal->lte($paymentDate));
         }
 
         $subscription->update([

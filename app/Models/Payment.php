@@ -11,6 +11,7 @@ class Payment extends Model
         'service_id',
         'subscription_id',
         'paid_at',
+        'covered_period_start',
         'amount',
         'currency',
         'method',
@@ -22,8 +23,34 @@ class Payment extends Model
     {
         return [
             'paid_at' => 'date',
+            'covered_period_start' => 'date',
             'amount' => 'decimal:2',
         ];
+    }
+
+    public function coveredPeriodLabel(): string
+    {
+        return $this->covered_period_start?->format('Y-m') ?? '-';
+    }
+
+    public function coverageTimingLabel(): string
+    {
+        if (! $this->covered_period_start || ! $this->paid_at) {
+            return '-';
+        }
+
+        $paidMonth = $this->paid_at->copy()->startOfMonth();
+        $coveredMonth = $this->covered_period_start->copy()->startOfMonth();
+
+        if ($coveredMonth->gt($paidMonth)) {
+            return 'Anticipado';
+        }
+
+        if ($coveredMonth->lt($paidMonth)) {
+            return 'Atrasado';
+        }
+
+        return 'Al dia';
     }
 
     public function service(): BelongsTo

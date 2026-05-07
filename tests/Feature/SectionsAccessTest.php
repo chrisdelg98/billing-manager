@@ -56,6 +56,7 @@ class SectionsAccessTest extends TestCase
             'service_id' => $service->id,
             'subscription_id' => $subscription->id,
             'paid_at' => now()->toDateString(),
+            'covered_period' => now()->format('Y-m'),
             'amount' => 50,
             'currency' => 'USD',
             'method' => 'transfer',
