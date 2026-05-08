@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use App\Models\Payment;
 use App\Models\Service;
 use App\Models\ServiceCatalogOption;
@@ -11,9 +13,11 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class PaymentController extends Controller
 {
@@ -95,6 +99,9 @@ class PaymentController extends Controller
             'amount',
             'currency',
             'notes',
+            'billing_contact_name',
+            'billing_contact_email',
+            'billing_contact_whatsapp',
         ]);
 
         $defaultSubscription = null;
@@ -127,13 +134,15 @@ class PaymentController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validatedData($request);
+        $delivery = $this->validatedDeliveryData($request);
+        $data = array_merge($data, $this->recipientPayload($delivery));
         $payment = Payment::query()->create($data);
 
         $this->advanceSubscriptionRenewal($payment);
 
         AuditLogger::log('created', 'payment', $payment->id, ['amount' => $payment->amount]);
 
-        return redirect()->route('pagos.index')->with('status', 'Pago registrado correctamente.');
+        return $this->finalizeWithDelivery($payment, 'Pago registrado correctamente.', $delivery);
     }
 
     public function edit(Payment $payment): View
@@ -146,6 +155,9 @@ class PaymentController extends Controller
             'amount',
             'currency',
             'notes',
+            'billing_contact_name',
+            'billing_contact_email',
+            'billing_contact_whatsapp',
         ]);
         $defaultNotes = (string) ($payment->notes ?? '');
         $currencyOptions = $this->activeCurrencyOptions();
@@ -157,6 +169,8 @@ class PaymentController extends Controller
     {
         $previousStatus = (string) $payment->status;
         $data = $this->validatedData($request);
+        $delivery = $this->validatedDeliveryData($request);
+        $data = array_merge($data, $this->recipientPayload($delivery));
         $payment->update($data);
 
         if ($previousStatus !== Payment::STATUS_CONFIRMED && (string) $payment->status === Payment::STATUS_CONFIRMED) {
@@ -165,7 +179,7 @@ class PaymentController extends Controller
 
         AuditLogger::log('updated', 'payment', $payment->id, ['amount' => $payment->amount]);
 
-        return redirect()->route('pagos.index')->with('status', 'Pago actualizado correctamente.');
+        return $this->finalizeWithDelivery($payment, 'Pago actualizado correctamente.', $delivery);
     }
 
     public function destroy(Payment $payment): RedirectResponse
@@ -204,11 +218,15 @@ class PaymentController extends Controller
             ],
             'method' => ['nullable', 'in:transfer,cash,paypal,other'],
             'reference' => ['nullable', 'string', 'max:120'],
+            'recipient_name' => ['nullable', 'string', 'max:120'],
+            'recipient_email' => ['nullable', 'email', 'max:190'],
+            'recipient_whatsapp' => ['nullable', 'string', 'max:30'],
             'notes' => ['nullable', 'string'],
         ]);
 
         $data['status'] = (string) ($data['status'] ?? Payment::STATUS_CONFIRMED);
         $data['currency'] = strtoupper((string) $data['currency']);
+        $data['recipient_whatsapp'] = $this->normalizePhone((string) ($data['recipient_whatsapp'] ?? ''));
 
         if ($data['status'] === Payment::STATUS_PENDING) {
             $data['method'] = 'other';
@@ -269,6 +287,156 @@ class PaymentController extends Controller
         unset($data['base_amount'], $data['discount_percent'], $data['discount_amount']);
 
         return $data;
+    }
+
+    private function validatedDeliveryData(Request $request): array
+    {
+        $data = $request->validate([
+            'send_method' => ['nullable', 'in:none,email,whatsapp'],
+            'recipient_name' => ['nullable', 'string', 'max:120'],
+            'recipient_email' => ['nullable', 'email', 'max:190'],
+            'recipient_whatsapp' => ['nullable', 'string', 'max:30'],
+        ]);
+
+        $data['send_method'] = (string) ($data['send_method'] ?? 'none');
+        $data['recipient_whatsapp'] = $this->normalizePhone((string) ($data['recipient_whatsapp'] ?? ''));
+
+        if ($data['send_method'] === 'email' && empty($data['recipient_email'])) {
+            throw ValidationException::withMessages([
+                'recipient_email' => 'Indica el correo destino para enviar el comprobante.',
+            ]);
+        }
+
+        if ($data['send_method'] === 'whatsapp' && empty($data['recipient_whatsapp'])) {
+            throw ValidationException::withMessages([
+                'recipient_whatsapp' => 'Indica el numero de WhatsApp destino para compartir el cobro.',
+            ]);
+        }
+
+        return $data;
+    }
+
+    private function recipientPayload(array $delivery): array
+    {
+        return [
+            'recipient_name' => $delivery['recipient_name'] ?? null,
+            'recipient_email' => $delivery['recipient_email'] ?? null,
+            'recipient_whatsapp' => $delivery['recipient_whatsapp'] ?? null,
+        ];
+    }
+
+    private function finalizeWithDelivery(Payment $payment, string $baseStatus, array $delivery): RedirectResponse
+    {
+        $statusMessage = $baseStatus;
+
+        if ($delivery['send_method'] === 'email') {
+            try {
+                $this->sendPaymentVoucherEmail(
+                    $payment->fresh(['service', 'subscription']),
+                    (string) $delivery['recipient_email'],
+                    (string) ($delivery['recipient_name'] ?? '')
+                );
+
+                $statusMessage .= ' Comprobante enviado por correo.';
+            } catch (Throwable $exception) {
+                report($exception);
+                $statusMessage .= ' No se pudo enviar el correo; revisa la configuracion SMTP.';
+            }
+
+            return redirect()->route('pagos.index')->with('status', $statusMessage);
+        }
+
+        if ($delivery['send_method'] === 'whatsapp') {
+            $statusMessage .= ' Mensaje listo para enviar por WhatsApp.';
+
+            return redirect()
+                ->route('comprobantes.pagos.show', $payment)
+                ->with('status', $statusMessage)
+                ->with('whatsapp_share_url', $this->buildWhatsAppShareUrl($payment, (string) $delivery['recipient_whatsapp']));
+        }
+
+        return redirect()->route('pagos.index')->with('status', $statusMessage);
+    }
+
+    private function sendPaymentVoucherEmail(Payment $payment, string $recipientEmail, string $recipientName = ''): void
+    {
+        $isPending = $payment->isPending();
+        $voucherNumber = sprintf($isPending ? 'ORD-%06d' : 'PAGO-%06d', (int) $payment->id);
+        $pdfFileName = sprintf('%s-%s.pdf', $isPending ? 'orden-pago' : 'comprobante', $voucherNumber);
+        $pdfOutput = $this->buildPaymentVoucherPdf($payment, $voucherNumber, $isPending);
+
+        $subject = $isPending
+            ? "Orden de pago {$voucherNumber}"
+            : "Comprobante de pago {$voucherNumber}";
+
+        Mail::send([], [], function ($message) use ($recipientEmail, $recipientName, $subject, $payment, $voucherNumber, $isPending, $pdfOutput, $pdfFileName): void {
+            $toName = trim($recipientName);
+
+            if ($toName !== '') {
+                $message->to($recipientEmail, $toName);
+            } else {
+                $message->to($recipientEmail);
+            }
+
+            $message->subject($subject);
+            $message->html(view('emails.payment-voucher', compact('payment', 'voucherNumber', 'isPending'))->render());
+            $message->attachData($pdfOutput, $pdfFileName, ['mime' => 'application/pdf']);
+        });
+    }
+
+    private function buildPaymentVoucherPdf(Payment $payment, string $voucherNumber, bool $isPending): string
+    {
+        $html = view('vouchers.pdf.payment-receipt', compact('payment', 'voucherNumber', 'isPending'))->render();
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->setPaper($this->paymentPaperSize($payment));
+        $pdf->render();
+
+        return $pdf->output();
+    }
+
+    /**
+     * @return array{0:int,1:int,2:float,3:float}
+     */
+    private function paymentPaperSize(Payment $payment): array
+    {
+        $width = 595.28;
+        $baseHeight = 420.0;
+        $notesLength = mb_strlen(trim((string) ($payment->notes ?? '')));
+        $notesLines = $notesLength > 0 ? (int) ceil($notesLength / 95) : 0;
+        $height = $baseHeight + max(0, $notesLines - 2) * 12;
+
+        return [0, 0, $width, min(max($height, 420.0), 900.0)];
+    }
+
+    private function buildWhatsAppShareUrl(Payment $payment, string $recipientWhatsapp): string
+    {
+        $isPending = $payment->isPending();
+        $voucherNumber = sprintf($isPending ? 'ORD-%06d' : 'PAGO-%06d', (int) $payment->id);
+
+        $message = sprintf(
+            "Hola, te comparto %s %s del servicio %s por %s %s.\nReferencia: %s.\nAdjunto el PDF en este envio.",
+            $isPending ? 'la orden de pago' : 'el comprobante de pago',
+            $voucherNumber,
+            $payment->service?->name ?: 'N/A',
+            number_format((float) $payment->amount, 2),
+            $payment->currency,
+            $payment->reference ?: '-'
+        );
+
+        return 'https://wa.me/'.$recipientWhatsapp.'?text='.rawurlencode($message);
+    }
+
+    private function normalizePhone(string $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', $value);
+
+        return $digits !== '' ? $digits : null;
     }
 
     private function advanceSubscriptionRenewal(Payment $payment): void

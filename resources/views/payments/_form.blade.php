@@ -7,6 +7,9 @@
                 'service_id' => (string) $subscriptionOption->service_id,
                 'amount' => (float) $subscriptionOption->amount,
                 'currency' => (string) $subscriptionOption->currency,
+                'contact_name' => (string) ($subscriptionOption->billing_contact_name ?? ''),
+                'contact_email' => (string) ($subscriptionOption->billing_contact_email ?? ''),
+                'contact_whatsapp' => (string) ($subscriptionOption->billing_contact_whatsapp ?? ''),
             ],
         ])
         ->toArray();
@@ -30,6 +33,10 @@
     $seedAmount = old('amount', $payment->amount ?? ($defaultAmount ?? $seedBaseAmount ?? ''));
     $seedDiscountPercent = old('discount_percent', '');
     $seedDiscountAmount = old('discount_amount', '');
+    $seedSendMethod = (string) old('send_method', 'none');
+    $seedRecipientName = (string) old('recipient_name', $payment->recipient_name ?? '');
+    $seedRecipientEmail = (string) old('recipient_email', $payment->recipient_email ?? '');
+    $seedRecipientWhatsapp = (string) old('recipient_whatsapp', $payment->recipient_whatsapp ?? '');
     $currencyOptions = collect($currencyOptions ?? ['USD'])
         ->map(fn ($code) => strtoupper((string) $code))
         ->filter(fn ($code) => $code !== '')
@@ -55,6 +62,10 @@
         discountPercent: Number(@js((float) $seedDiscountPercent)),
         discountAmount: Number(@js((float) $seedDiscountAmount)),
         currency: @js((string) $seedCurrency),
+        sendMethod: @js((string) $seedSendMethod),
+        recipientName: @js((string) $seedRecipientName),
+        recipientEmail: @js((string) $seedRecipientEmail),
+        recipientWhatsapp: @js((string) $seedRecipientWhatsapp),
         subscriptions: @js($subscriptionMap),
         round(value) {
             return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -72,6 +83,7 @@
             this.serviceId = String(meta.service_id);
             this.currency = String(meta.currency || this.currency);
             this.baseAmount = this.round(meta.amount || 0);
+            this.syncContactFromSubscription(resetAmounts);
 
             if (resetAmounts) {
                 this.discountPercent = 0;
@@ -82,6 +94,25 @@
 
             if (!this.amount || this.amount <= 0) {
                 this.amount = this.baseAmount;
+            }
+        },
+        syncContactFromSubscription(force = false) {
+            const meta = this.subscriptions[this.subscriptionId];
+
+            if (!meta) {
+                return;
+            }
+
+            if (force || !this.recipientName) {
+                this.recipientName = String(meta.contact_name || '');
+            }
+
+            if (force || !this.recipientEmail) {
+                this.recipientEmail = String(meta.contact_email || '');
+            }
+
+            if (force || !this.recipientWhatsapp) {
+                this.recipientWhatsapp = String(meta.contact_whatsapp || '');
             }
         },
         applyDiscountPercent() {
@@ -238,7 +269,42 @@
         @error('method')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
-    <div class="col-span-2">
+    <div class="sm:col-span-2 rounded-lg border border-slate-200 bg-white p-4">
+        <h3 class="text-sm font-semibold text-slate-900">Enviar ahora (opcional)</h3>
+        <p class="mt-1 text-xs text-slate-500">Selecciona si quieres enviar este cobro al guardar. Si eliges WhatsApp, se abrira el mensaje prellenado para envio manual.</p>
+
+        <div class="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+                <label for="send_method" class="mb-1 block text-sm font-medium text-slate-700">Metodo de envio</label>
+                <select id="send_method" name="send_method" x-model="sendMethod" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                    <option value="none">No enviar ahora</option>
+                    <option value="email">Enviar por email</option>
+                    <option value="whatsapp">Enviar por WhatsApp</option>
+                </select>
+                @error('send_method')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+
+            <div>
+                <label for="recipient_name" class="mb-1 block text-sm font-medium text-slate-700">Nombre destinatario (opcional)</label>
+                <input id="recipient_name" name="recipient_name" type="text" x-model="recipientName" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                @error('recipient_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+
+            <div x-show="sendMethod === 'email'" x-cloak>
+                <label for="recipient_email" class="mb-1 block text-sm font-medium text-slate-700">Email destino</label>
+                <input id="recipient_email" name="recipient_email" type="email" x-model="recipientEmail" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                @error('recipient_email')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+
+            <div x-show="sendMethod === 'whatsapp'" x-cloak>
+                <label for="recipient_whatsapp" class="mb-1 block text-sm font-medium text-slate-700">WhatsApp destino</label>
+                <input id="recipient_whatsapp" name="recipient_whatsapp" type="text" x-model="recipientWhatsapp" placeholder="Ejemplo: 18095551234" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                @error('recipient_whatsapp')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+            </div>
+        </div>
+    </div>
+
+    <div class="sm:col-span-2">
         <label for="reference" class="mb-1 block text-sm font-medium text-slate-700">Referencia</label>
         <input id="reference" name="reference" type="text" value="{{ old('reference', $payment->reference ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
         @error('reference')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror

@@ -225,6 +225,9 @@ class SubscriptionController extends Controller
             ],
             'next_renewal_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'billing_contact_name' => ['nullable', 'string', 'max:120'],
+            'billing_contact_email' => ['nullable', 'email', 'max:190'],
+            'billing_contact_whatsapp' => ['nullable', 'string', 'max:30'],
             'has_trial' => ['nullable', 'boolean'],
             'trial_ends_at' => ['nullable', 'date'],
             'is_active' => ['nullable', 'boolean'],
@@ -232,6 +235,7 @@ class SubscriptionController extends Controller
         ]);
 
         $data['currency'] = strtoupper((string) $data['currency']);
+        $data['billing_contact_whatsapp'] = $this->normalizePhone((string) ($data['billing_contact_whatsapp'] ?? ''));
         $data['has_trial'] = (bool) ($data['has_trial'] ?? false);
 
         if (! empty($data['trial_ends_at'])) {
@@ -270,6 +274,13 @@ class SubscriptionController extends Controller
         $data['license_api_enabled'] = (bool) ($data['license_api_enabled'] ?? false);
 
         return $data;
+    }
+
+    private function normalizePhone(string $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', $value);
+
+        return $digits !== '' ? $digits : null;
     }
 
     private function automaticRenewalAfterTrial(Carbon $trialEnd, string $billingCycle): Carbon

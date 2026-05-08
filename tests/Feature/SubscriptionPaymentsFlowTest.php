@@ -157,6 +157,87 @@ class SubscriptionPaymentsFlowTest extends TestCase
         $this->assertEquals('2026-07-30', $subscription->fresh()->next_renewal_at?->toDateString());
     }
 
+    public function test_payment_store_requires_email_when_send_method_is_email(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE',
+            'billing_cycle' => 'monthly',
+            'amount' => 100,
+            'currency' => 'USD',
+            'next_renewal_at' => '2026-06-30',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('pagos.store'), [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+                'status' => 'confirmed',
+                'paid_at' => '2026-06-12',
+                'base_amount' => 100,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'amount' => 100,
+                'currency' => 'USD',
+                'method' => 'transfer',
+                'send_method' => 'email',
+            ])
+            ->assertSessionHasErrors('recipient_email');
+    }
+
+    public function test_payment_store_can_prepare_manual_whatsapp_delivery(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $subscription = Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE',
+            'billing_cycle' => 'monthly',
+            'amount' => 100,
+            'currency' => 'USD',
+            'next_renewal_at' => '2026-06-30',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->post(route('pagos.store'), [
+                'service_id' => $service->id,
+                'subscription_id' => $subscription->id,
+                'status' => 'pending',
+                'paid_at' => '2026-06-12',
+                'base_amount' => 100,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'amount' => 100,
+                'currency' => 'USD',
+                'reference' => 'ORD-WA-001',
+                'send_method' => 'whatsapp',
+                'recipient_name' => 'Cliente Demo',
+                'recipient_whatsapp' => '+1 (809) 555-1234',
+            ]);
+
+        $payment = Payment::query()->firstOrFail();
+
+        $response
+            ->assertRedirect(route('comprobantes.pagos.show', $payment))
+            ->assertSessionHas('whatsapp_share_url');
+
+        $this->assertSame('18095551234', $payment->recipient_whatsapp);
+    }
+
     public function test_payment_store_allows_pending_order_with_discount_without_advancing_renewal(): void
     {
         $user = User::factory()->create();
@@ -289,6 +370,37 @@ class SubscriptionPaymentsFlowTest extends TestCase
             ->assertRedirect(route('pagos.index'));
 
         $this->assertEquals('2026-07-30', $subscription->fresh()->next_renewal_at?->toDateString());
+    }
+
+    public function test_subscription_store_accepts_billing_contact_fields(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('suscripciones.store'), [
+                'service_id' => $service->id,
+                'name' => 'CLINEXUS CONTACTO',
+                'billing_cycle' => 'monthly',
+                'amount' => 99,
+                'currency' => 'USD',
+                'is_active' => 1,
+                'billing_contact_name' => 'Mariana Perez',
+                'billing_contact_email' => 'mariana@example.com',
+                'billing_contact_whatsapp' => '+1 (809) 555-7777',
+            ])
+            ->assertRedirect(route('suscripciones.index'));
+
+        $this->assertDatabaseHas('subscriptions', [
+            'name' => 'CLINEXUS CONTACTO',
+            'billing_contact_name' => 'Mariana Perez',
+            'billing_contact_email' => 'mariana@example.com',
+            'billing_contact_whatsapp' => '18095557777',
+        ]);
     }
 
     public function test_payment_store_advances_yearly_subscription_next_renewal(): void

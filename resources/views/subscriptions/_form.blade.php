@@ -163,6 +163,31 @@
             <textarea id="notes" name="notes" rows="4" maxlength="1000" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200" placeholder="Ejemplo: Mes de prueba / Descuento 20% por onboarding">{{ old('notes', $subscription->notes ?? '') }}</textarea>
             @error('notes')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>
+
+        <div class="rounded-lg border border-slate-200 bg-white p-4">
+            <h3 class="text-sm font-semibold text-slate-900">Contacto de cobro (opcional)</h3>
+            <p class="mt-1 text-xs text-slate-500">Se usa para sugerir destinatario al enviar ordenes/comprobantes por email o WhatsApp.</p>
+
+            <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="billing_contact_name" class="mb-1 block text-sm font-medium text-slate-700">Nombre de contacto</label>
+                    <input id="billing_contact_name" name="billing_contact_name" type="text" value="{{ old('billing_contact_name', $subscription->billing_contact_name ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                    @error('billing_contact_name')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
+                    <label for="billing_contact_email" class="mb-1 block text-sm font-medium text-slate-700">Email</label>
+                    <input id="billing_contact_email" name="billing_contact_email" type="email" value="{{ old('billing_contact_email', $subscription->billing_contact_email ?? '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                    @error('billing_contact_email')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="billing_contact_whatsapp" class="mb-1 block text-sm font-medium text-slate-700">WhatsApp</label>
+                    <input id="billing_contact_whatsapp" name="billing_contact_whatsapp" type="text" value="{{ old('billing_contact_whatsapp', $subscription->billing_contact_whatsapp ?? '') }}" placeholder="Ejemplo: 18095551234" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                    @error('billing_contact_whatsapp')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+                </div>
+            </div>
+        </div>
     </div>
 
     <aside class="space-y-5 lg:col-span-1">

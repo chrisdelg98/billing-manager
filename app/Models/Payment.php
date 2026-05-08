@@ -25,6 +25,9 @@ class Payment extends Model
         'currency',
         'method',
         'reference',
+        'recipient_name',
+        'recipient_email',
+        'recipient_whatsapp',
         'notes',
     ];
 

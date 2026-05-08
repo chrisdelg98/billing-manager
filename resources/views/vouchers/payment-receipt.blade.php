@@ -166,6 +166,19 @@
             </div>
         </div>
 
+        @if (session('status'))
+            <div style="margin-bottom: 12px; border: 1px solid #86efac; background: #f0fdf4; color: #166534; padding: 10px 12px; border-radius: 8px; font-size: 13px;">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        @if (session('whatsapp_share_url'))
+            <div style="margin-bottom: 12px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <span>Mensaje de WhatsApp listo. Abre el chat y envia el PDF manualmente.</span>
+                <a href="{{ session('whatsapp_share_url') }}" target="_blank" rel="noopener noreferrer" class="btn" style="border-color: #93c5fd;">Abrir WhatsApp</a>
+            </div>
+        @endif
+
         <section class="card">
             <header class="header">
                 <div>
