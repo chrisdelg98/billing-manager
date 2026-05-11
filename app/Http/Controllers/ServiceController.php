@@ -21,13 +21,37 @@ class ServiceController extends Controller
             $query->where(function ($builder) use ($search): void {
                 $builder->where('name', 'like', "%{$search}%")
                     ->orWhere('provider', 'like', "%{$search}%")
-                    ->orWhere('type', 'like', "%{$search}%");
+                    ->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('owner_name', 'like', "%{$search}%");
             });
         }
 
-        $services = $query->paginate(10)->withQueryString();
+        if ($request->filled('status')) {
+            $status = (string) $request->string('status');
 
-        return view('services.index', compact('services'));
+            if (in_array($status, ['active', 'paused', 'archived'], true)) {
+                $query->where('status', $status);
+            }
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', trim((string) $request->string('type')));
+        }
+
+        if ($request->filled('provider')) {
+            $query->where('provider', trim((string) $request->string('provider')));
+        }
+
+        if ($request->filled('owner_name')) {
+            $owner = trim((string) $request->string('owner_name'));
+            $query->where('owner_name', 'like', "%{$owner}%");
+        }
+
+        $services = $query->paginate(10)->withQueryString();
+        $typeOptions = $this->filterOptionsFor('type', ServiceCatalogOption::TYPE_SERVICE);
+        $providerOptions = $this->filterOptionsFor('provider', ServiceCatalogOption::TYPE_PROVIDER);
+
+        return view('services.index', compact('services', 'typeOptions', 'providerOptions'));
     }
 
     public function create(): View
@@ -101,5 +125,22 @@ class ServiceController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name');
+    }
+
+    private function filterOptionsFor(string $column, string $catalogType): Collection
+    {
+        $existingValues = Service::query()
+            ->whereNotNull($column)
+            ->where($column, '!=', '')
+            ->orderBy($column)
+            ->distinct()
+            ->pluck($column);
+
+        return $existingValues
+            ->merge($this->activeCatalogNames($catalogType))
+            ->map(fn ($value) => trim((string) $value))
+            ->filter(fn ($value) => $value !== '')
+            ->unique()
+            ->values();
     }
 }

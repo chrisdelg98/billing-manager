@@ -4,21 +4,69 @@
     </x-slot>
 
     <div class="space-y-6">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <form method="GET" action="{{ route('servicios.index') }}" class="flex w-full max-w-md items-center gap-2">
-                <input type="text" name="q" value="{{ request('q') }}" placeholder="Buscar por nombre, tipo o proveedor" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-                <button type="submit" class="ui-btn rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Buscar</button>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <form method="GET" action="{{ route('servicios.index') }}" class="space-y-3">
+                <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="w-full lg:max-w-xl">
+                        <input
+                            type="text"
+                            name="q"
+                            value="{{ request('q') }}"
+                            placeholder="Buscar por nombre, tipo, proveedor o responsable"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                        >
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="submit" class="ui-btn rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Filtrar</button>
+                        <a href="{{ route('servicios.index') }}" class="ui-btn inline-flex items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">Limpiar</a>
+                        <a href="{{ route('catalogos.servicios.index') }}" class="ui-btn inline-flex items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                            Gestionar listas
+                        </a>
+                        <a href="{{ route('servicios.create') }}" class="ui-btn inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+                            Nuevo servicio
+                        </a>
+                    </div>
+                </div>
+
+                <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <select name="status" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                        <option value="">Todos los estados</option>
+                        <option value="active" @selected(request('status') === 'active')>Activos</option>
+                        <option value="paused" @selected(request('status') === 'paused')>Pausados</option>
+                        <option value="archived" @selected(request('status') === 'archived')>Archivados</option>
+                    </select>
+
+                    <select name="type" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                        <option value="">Todos los tipos</option>
+                        @foreach($typeOptions as $typeOption)
+                            <option value="{{ $typeOption }}" @selected(request('type') === $typeOption)>{{ $typeOption }}</option>
+                        @endforeach
+                    </select>
+
+                    <select name="provider" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+                        <option value="">Todos los proveedores</option>
+                        @foreach($providerOptions as $providerOption)
+                            <option value="{{ $providerOption }}" @selected(request('provider') === $providerOption)>{{ $providerOption }}</option>
+                        @endforeach
+                    </select>
+
+                    <input
+                        type="text"
+                        name="owner_name"
+                        value="{{ request('owner_name') }}"
+                        placeholder="Responsable"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                    >
+                </div>
             </form>
+        </div>
 
-            <div class="flex items-center gap-2">
-                <a href="{{ route('catalogos.servicios.index') }}" class="ui-btn inline-flex items-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                    Gestionar listas
-                </a>
-
-                <a href="{{ route('servicios.create') }}" class="ui-btn inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
-                    Nuevo servicio
-                </a>
-            </div>
+        <div class="flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs text-slate-600">
+            <span class="font-medium text-slate-700">Estado de servicio</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-emerald-400/70"></span>Activo</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-amber-400/70"></span>Pausado</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-slate-400/70"></span>Archivado</span>
         </div>
 
         @if (session('status'))
@@ -34,6 +82,7 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                         <tr>
+                            <th class="w-8 px-2 py-3"></th>
                             <th class="px-4 py-3">Nombre</th>
                             <th class="px-4 py-3">Tipo</th>
                             <th class="px-4 py-3">Proveedor</th>
@@ -44,11 +93,21 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse($services as $service)
+                            @php
+                                [$statusLabel, $statusBarClass] = match ($service->status) {
+                                    'active' => ['Activo', 'bg-emerald-400/70'],
+                                    'paused' => ['Pausado', 'bg-amber-400/70'],
+                                    default => ['Archivado', 'bg-slate-400/70'],
+                                };
+                            @endphp
                             <tr>
+                                <td class="px-2 py-3 align-top">
+                                    <span class="mx-auto block h-12 w-1.5 rounded-full {{ $statusBarClass }}"></span>
+                                </td>
                                 <td class="px-4 py-3 font-medium text-slate-900">{{ $service->name }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $service->type ?: '-' }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $service->provider ?: '-' }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ ucfirst($service->status) }}</td>
+                                <td class="px-4 py-3 text-slate-700">{{ $statusLabel }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $service->owner_name ?: '-' }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-end gap-2">
@@ -63,7 +122,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No hay servicios registrados.</td>
+                                <td colspan="7" class="px-4 py-8 text-center text-sm text-slate-500">No hay servicios registrados.</td>
                             </tr>
                         @endforelse
                     </tbody>
