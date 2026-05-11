@@ -48,6 +48,7 @@
                         <li>ok (boolean)</li>
                         <li>license_code (string)</li>
                         <li>status (string)</li>
+                        <li>status_label (string)</li>
                         <li>can_access (boolean)</li>
                         <li>reason_code (string)</li>
                         <li>days_remaining (number|null)</li>
@@ -93,6 +94,7 @@
   "ok": true,
   "license_code": "LIC-XXXXXXXXXXXX",
   "status": "active",
+    "status_label": "Vence en 30 dias",
   "can_access": true,
   "reason_code": "paid_current",
     "days_remaining": 30,
@@ -123,6 +125,16 @@
             <div class="rounded-xl border border-slate-200 bg-white p-5">
                 <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Regla de periodo de prueba</h3>
                 <p class="mt-3 text-sm text-slate-700">Si una suscripcion tiene periodo de prueba y no se define una fecha manual de renovacion, la fecha de renovacion se fija en la misma fecha fin de prueba. Esto evita dias extra de acceso y reduce confusion con el cliente final.</p>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white p-5">
+                <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">status_label listo para UI</h3>
+                <ul class="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                    <li>trial_active: Prueba vence en X dias / Prueba vence hoy</li>
+                    <li>active: Vence en X dias / Vence hoy / Activa sin fecha de vencimiento</li>
+                    <li>overdue: Vencida</li>
+                    <li>suspended: Suscripcion inactiva</li>
+                </ul>
             </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-5">

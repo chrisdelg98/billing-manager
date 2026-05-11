@@ -37,6 +37,7 @@ Campos principales:
 - ok: boolean
 - license_code: string
 - status: string
+- status_label: string (texto listo para UI)
 - can_access: boolean
 - reason_code: string
 - days_remaining: number|null (dias restantes para el limite vigente)
@@ -72,6 +73,13 @@ Semantica de days_remaining:
 - trial_active: dias restantes hasta trial_ends_at
 - active: dias restantes hasta next_renewal_at (o null si no hay limite)
 - overdue/suspended: 0
+
+Semantica de status_label (ejemplos):
+
+- trial_active: Prueba vence en X dias / Prueba vence hoy
+- active: Vence en X dias / Vence hoy / Activa sin fecha de vencimiento
+- overdue: Vencida
+- suspended: Suscripcion inactiva
 
 Regla de consumo recomendada:
 

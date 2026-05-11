@@ -42,6 +42,7 @@ class LicenseApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('ok', true)
             ->assertJsonPath('status', 'active')
+            ->assertJsonPath('status_label', 'Vence en 10 dias')
             ->assertJsonPath('can_access', true)
             ->assertJsonPath('days_remaining', 10)
             ->assertJsonPath('expires_on', $subscription->next_renewal_at?->toDateString())
@@ -148,6 +149,7 @@ class LicenseApiTest extends TestCase
         ])->getJson('/api/v1/license/status')
             ->assertOk()
             ->assertJsonPath('status', 'overdue')
+            ->assertJsonPath('status_label', 'Vencida')
             ->assertJsonPath('can_access', false)
             ->assertJsonPath('days_remaining', 0)
             ->assertJsonPath('reason_code', 'renewal_overdue');
@@ -183,6 +185,7 @@ class LicenseApiTest extends TestCase
         ])->getJson('/api/v1/license/status')
             ->assertOk()
             ->assertJsonPath('status', 'trial_active')
+            ->assertJsonPath('status_label', 'Prueba vence en 5 dias')
             ->assertJsonPath('can_access', true)
             ->assertJsonPath('days_remaining', 5)
             ->assertJsonPath('expires_on', $trialEnd)

@@ -95,6 +95,7 @@ class LicenseStatusController extends Controller
             'ok' => true,
             'license_code' => $subscription->license_code,
             'status' => $status['status'],
+            'status_label' => $this->buildStatusLabel($status),
             'can_access' => $status['can_access'],
             'reason_code' => $status['reason_code'],
             'days_remaining' => $status['days_remaining'],
@@ -191,6 +192,48 @@ class LicenseStatusController extends Controller
             'trial_days_remaining' => $trialDaysRemaining,
             'renewal_days_remaining' => $renewalDaysRemaining,
         ];
+    }
+
+    private function buildStatusLabel(array $status): string
+    {
+        $statusCode = (string) ($status['status'] ?? '');
+        $daysRemaining = isset($status['days_remaining']) && $status['days_remaining'] !== null
+            ? (int) $status['days_remaining']
+            : null;
+
+        if ($statusCode === 'trial_active') {
+            if ($daysRemaining === null || $daysRemaining <= 0) {
+                return 'Prueba vence hoy';
+            }
+
+            return $daysRemaining === 1
+                ? 'Prueba vence en 1 dia'
+                : "Prueba vence en {$daysRemaining} dias";
+        }
+
+        if ($statusCode === 'active') {
+            if ($daysRemaining === null) {
+                return 'Activa sin fecha de vencimiento';
+            }
+
+            if ($daysRemaining <= 0) {
+                return 'Vence hoy';
+            }
+
+            return $daysRemaining === 1
+                ? 'Vence en 1 dia'
+                : "Vence en {$daysRemaining} dias";
+        }
+
+        if ($statusCode === 'overdue') {
+            return 'Vencida';
+        }
+
+        if ($statusCode === 'suspended') {
+            return 'Suscripcion inactiva';
+        }
+
+        return 'Estado desconocido';
     }
 
     private function logAccess(Request $request, ?Subscription $subscription, ?string $licenseCode, string $resultStatus, int $httpStatus): void
