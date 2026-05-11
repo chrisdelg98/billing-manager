@@ -17,10 +17,92 @@ class CostItemController extends Controller
     public function index(Request $request): View
     {
         $query = CostItem::query()->latest();
+        $today = now()->startOfDay();
 
         if ($request->filled('q')) {
             $search = trim((string) $request->string('q'));
-            $query->where('name', 'like', "%{$search}%");
+            $query->where(function ($builder) use ($search): void {
+                $builder
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhere('cost_type', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $status = (string) $request->string('status');
+
+            if ($status === 'active') {
+                $query->where('is_active', true);
+            }
+
+            if ($status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        if ($request->filled('category')) {
+            $category = (string) $request->string('category');
+
+            if (in_array($category, ['hosting', 'license', 'infra', 'other'], true)) {
+                $query->where('category', $category);
+            }
+        }
+
+        if ($request->filled('cost_type')) {
+            $costType = (string) $request->string('cost_type');
+
+            if (in_array($costType, ['direct', 'shared'], true)) {
+                $query->where('cost_type', $costType);
+            }
+        }
+
+        if ($request->filled('billing_cycle')) {
+            $billingCycle = (string) $request->string('billing_cycle');
+
+            if (in_array($billingCycle, ['monthly', 'yearly', 'custom'], true)) {
+                $query->where('billing_cycle', $billingCycle);
+            }
+        }
+
+        if ($request->filled('renewal_window')) {
+            $window = (string) $request->string('renewal_window');
+
+            if ($window === 'overdue') {
+                $query
+                    ->whereNotNull('next_renewal_at')
+                    ->whereDate('next_renewal_at', '<', $today->toDateString());
+            }
+
+            if ($window === 'next_7') {
+                $query
+                    ->whereNotNull('next_renewal_at')
+                    ->whereBetween('next_renewal_at', [
+                        $today->toDateString(),
+                        $today->copy()->addDays(7)->toDateString(),
+                    ]);
+            }
+
+            if ($window === 'next_30') {
+                $query
+                    ->whereNotNull('next_renewal_at')
+                    ->whereBetween('next_renewal_at', [
+                        $today->toDateString(),
+                        $today->copy()->addDays(30)->toDateString(),
+                    ]);
+            }
+
+            if ($window === 'no_date') {
+                $query->whereNull('next_renewal_at');
+            }
+        }
+
+        if ($request->filled('next_from')) {
+            $query->whereDate('next_renewal_at', '>=', (string) $request->string('next_from'));
+        }
+
+        if ($request->filled('next_to')) {
+            $query->whereDate('next_renewal_at', '<=', (string) $request->string('next_to'));
         }
 
         $costItems = $query->paginate(10)->withQueryString();
