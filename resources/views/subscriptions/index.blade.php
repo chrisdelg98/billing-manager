@@ -138,22 +138,121 @@
                                         </p>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex justify-end gap-2">
-                                        <a href="{{ route('comprobantes.suscripciones.recordatorio', $subscription) }}" class="ui-btn rounded-lg border border-orange-300 px-3 py-1.5 text-xs font-medium text-orange-700 transition hover:bg-orange-50">Voucher</a>
-                                        <a href="{{ route('pagos.create', ['service_id' => $subscription->service_id, 'subscription_id' => $subscription->id]) }}" class="ui-btn rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50">Generar pago</a>
+                                <td class="px-4 py-3 text-right">
+                                    <div
+                                        class="inline-flex"
+                                        x-data="{
+                                            open: false,
+                                            menuStyle: '',
+                                            toggleMenu() {
+                                                if (this.open) {
+                                                    this.closeMenu();
+                                                    return;
+                                                }
 
-                                        <form method="POST" action="{{ route('suscripciones.duplicate', $subscription) }}" onsubmit="return confirm('Se duplicara la suscripcion y se abrira para edicion. Continuar?')">
-                                            @csrf
-                                            <button type="submit" class="ui-btn rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-50">Duplicar</button>
-                                        </form>
+                                                this.open = true;
+                                                this.$nextTick(() => this.positionMenu());
+                                            },
+                                            closeMenu() {
+                                                this.open = false;
+                                            },
+                                            positionMenu() {
+                                                const trigger = this.$refs.trigger;
 
-                                        <a href="{{ route('suscripciones.edit', $subscription) }}" class="ui-btn rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">Editar</a>
-                                        <form method="POST" action="{{ route('suscripciones.destroy', $subscription) }}" onsubmit="return confirm('Se eliminara la suscripcion. Continuar?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="ui-btn rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50">Eliminar</button>
-                                        </form>
+                                                if (!trigger) {
+                                                    return;
+                                                }
+
+                                                const rect = trigger.getBoundingClientRect();
+                                                const menuWidth = 176;
+                                                const menuHeight = 230;
+                                                const viewportPadding = 8;
+                                                const gap = 8;
+
+                                                let left = rect.right - menuWidth;
+                                                left = Math.max(viewportPadding, Math.min(left, window.innerWidth - menuWidth - viewportPadding));
+
+                                                let top = rect.bottom + gap;
+                                                const canOpenUp = (rect.top - gap - menuHeight) > viewportPadding;
+                                                const overflowsBottom = (top + menuHeight) > (window.innerHeight - viewportPadding);
+
+                                                if (overflowsBottom && canOpenUp) {
+                                                    top = rect.top - gap - menuHeight;
+                                                }
+
+                                                top = Math.max(viewportPadding, top);
+                                                this.menuStyle = `left:${left}px; top:${top}px; width:${menuWidth}px;`;
+                                            },
+                                        }"
+                                        @resize.window="if (open) { positionMenu() }"
+                                        @scroll.window="if (open) { positionMenu() }"
+                                    >
+                                        <button
+                                            type="button"
+                                            x-ref="trigger"
+                                            class="ui-btn inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                            @click="toggleMenu()"
+                                            @keydown.escape.window="closeMenu()"
+                                            :aria-expanded="open.toString()"
+                                            aria-haspopup="true"
+                                        >
+                                            Acciones
+                                            <x-heroicon-o-chevron-down class="h-3.5 w-3.5" />
+                                        </button>
+
+                                        <template x-teleport="body">
+                                            <div
+                                                x-cloak
+                                                x-show="open"
+                                                x-transition.opacity.duration.120ms
+                                                class="fixed inset-0 z-[85]"
+                                                @click="closeMenu()"
+                                                @keydown.escape.window="closeMenu()"
+                                            >
+                                                <div
+                                                    class="absolute rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+                                                    :style="menuStyle"
+                                                    @click.stop
+                                                >
+                                                    <div class="space-y-1 text-left">
+                                                        <a
+                                                            href="{{ route('comprobantes.suscripciones.recordatorio', $subscription) }}"
+                                                            class="block rounded-lg border border-blue-300 px-3 py-2 text-xs font-medium text-blue-700 transition hover:bg-blue-50"
+                                                            @click="closeMenu()"
+                                                        >
+                                                            Voucher
+                                                        </a>
+
+                                                        <a
+                                                            href="{{ route('pagos.create', ['service_id' => $subscription->service_id, 'subscription_id' => $subscription->id]) }}"
+                                                            class="block rounded-lg border border-indigo-300 px-3 py-2 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50"
+                                                            @click="closeMenu()"
+                                                        >
+                                                            Generar pago
+                                                        </a>
+
+                                                        <form method="POST" action="{{ route('suscripciones.duplicate', $subscription) }}" onsubmit="return confirm('Se duplicara la suscripcion y se abrira para edicion. Continuar?')">
+                                                            @csrf
+                                                            <button type="submit" class="block w-full rounded-lg border border-orange-300 px-3 py-2 text-left text-xs font-medium text-orange-700 transition hover:bg-orange-50" @click="closeMenu()">Duplicar</button>
+                                                        </form>
+
+                                                        <a
+                                                            href="{{ route('suscripciones.edit', $subscription) }}"
+                                                            class="block rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                                                            @click="closeMenu()"
+                                                        >
+                                                            Editar
+                                                        </a>
+
+                                                        <form method="POST" action="{{ route('suscripciones.destroy', $subscription) }}" onsubmit="return confirm('Se eliminara la suscripcion. Continuar?')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="block w-full rounded-lg border border-red-300 px-3 py-2 text-left text-xs font-medium text-red-700 transition hover:bg-red-50" @click="closeMenu()">Eliminar</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
                                     </div>
                                 </td>
                             </tr>

@@ -75,11 +75,12 @@
         }
 
         .foot {
-            border-top: 1px dashed #fdba74;
+            border-top: 1px dashed #ffdfbe;
             padding: 10px 12px;
             color: #9a3412;
             line-height: 1.5;
             background: #fff7ed;
+            font-size: 10px;
         }
     </style>
 </head>

@@ -121,10 +121,10 @@
 
         .foot {
             margin: 0 22px 22px;
-            border: 1px dashed #fb923c;
+            border: 1px dashed #ffdfbe;
             border-radius: 10px;
             padding: 12px;
-            font-size: 13px;
+            font-size: 12px;
             color: #9a3412;
             background: #fff7ed;
         }
