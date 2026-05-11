@@ -153,7 +153,7 @@
             <div>
                 <label for="next_renewal_at" class="mb-1 block text-sm font-medium text-slate-700">Proxima renovacion</label>
                 <input id="next_renewal_at" name="next_renewal_at" type="date" value="{{ old('next_renewal_at', isset($subscription) && $subscription->next_renewal_at ? $subscription->next_renewal_at->toDateString() : '') }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-                <p class="mt-1 text-xs text-slate-500">Si hay periodo de prueba y dejas este campo vacio, se calcula automaticamente.</p>
+                <p class="mt-1 text-xs text-slate-500">Si hay periodo de prueba y dejas este campo vacio, se usa la misma fecha fin de prueba (sin dias extra).</p>
                 @error('next_renewal_at')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
         </div>
@@ -214,7 +214,7 @@
                     x-model="trialEndsAt"
                     class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200"
                 >
-                <p class="mt-1 text-xs text-slate-500">Al vencer esta fecha, la suscripcion pasa automaticamente a estado normal y se conserva el historico de prueba.</p>
+                <p class="mt-1 text-xs text-slate-500">Al vencer esta fecha termina el acceso de prueba. Si no hay pago confirmado, la suscripcion quedara vencida desde el dia siguiente.</p>
             </div>
             @error('trial_ends_at')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
         </div>

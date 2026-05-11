@@ -33,7 +33,7 @@
                 'points' => [
                     'Cada suscripcion pertenece a un servicio.',
                     'Define ciclo, monto y proxima renovacion.',
-                    'Periodo de prueba opcional: durante la prueba no cuenta como recurrente y al vencer pasa a normal automaticamente.',
+                    'Periodo de prueba opcional: durante la prueba no cuenta como recurrente y al vencer no se agregan dias extra de acceso.',
                     'Activa/Inactiva para controlar proyeccion de ingresos.',
                 ],
             ];

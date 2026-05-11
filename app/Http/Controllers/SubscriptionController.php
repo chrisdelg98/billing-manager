@@ -254,15 +254,16 @@ class SubscriptionController extends Controller
             if (! empty($data['next_renewal_at'])) {
                 $manualNextRenewal = Carbon::parse((string) $data['next_renewal_at'])->startOfDay();
 
-                if ($manualNextRenewal->lt($trialEnd->copy()->addDay())) {
+                if ($manualNextRenewal->lt($trialEnd)) {
                     throw ValidationException::withMessages([
-                        'next_renewal_at' => 'La renovacion manual debe ser posterior al fin del periodo de prueba.',
+                        'next_renewal_at' => 'La renovacion manual debe ser igual o posterior al fin del periodo de prueba.',
                     ]);
                 }
 
                 $data['next_renewal_at'] = $manualNextRenewal->toDateString();
             } else {
-                $data['next_renewal_at'] = $this->automaticRenewalAfterTrial($trialEnd, (string) $data['billing_cycle'])->toDateString();
+                // No extra grace days: once the trial ends, renewal is due on that same date.
+                $data['next_renewal_at'] = $trialEnd->toDateString();
             }
         }
 
@@ -281,15 +282,6 @@ class SubscriptionController extends Controller
         $digits = preg_replace('/\D+/', '', $value);
 
         return $digits !== '' ? $digits : null;
-    }
-
-    private function automaticRenewalAfterTrial(Carbon $trialEnd, string $billingCycle): Carbon
-    {
-        $startAfterTrial = $trialEnd->copy()->addDay()->startOfDay();
-
-        return $billingCycle === 'yearly'
-            ? $startAfterTrial->copy()->addYearNoOverflow()->subDay()->startOfDay()
-            : $startAfterTrial->copy()->addMonthNoOverflow()->subDay()->startOfDay();
     }
 
     private function activeCurrencyOptions(): Collection

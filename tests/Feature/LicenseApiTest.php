@@ -43,6 +43,9 @@ class LicenseApiTest extends TestCase
             ->assertJsonPath('ok', true)
             ->assertJsonPath('status', 'active')
             ->assertJsonPath('can_access', true)
+            ->assertJsonPath('days_remaining', 10)
+            ->assertJsonPath('expires_on', $subscription->next_renewal_at?->toDateString())
+            ->assertJsonPath('subscription.renewal_days_remaining', 10)
             ->assertJsonPath('subscription.id', $subscription->id)
             ->assertJsonPath('service.name', 'CLINEXUS');
 
@@ -146,6 +149,44 @@ class LicenseApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'overdue')
             ->assertJsonPath('can_access', false)
+            ->assertJsonPath('days_remaining', 0)
             ->assertJsonPath('reason_code', 'renewal_overdue');
+    }
+
+    public function test_license_status_returns_trial_days_remaining_when_trial_is_active(): void
+    {
+        $service = Service::query()->create([
+            'name' => 'CLINEXUS',
+            'status' => 'active',
+        ]);
+
+        $trialEnd = now()->addDays(5)->toDateString();
+
+        Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'CLINEXUS CORE TRIAL',
+            'billing_cycle' => 'monthly',
+            'amount' => 25,
+            'currency' => 'USD',
+            'is_active' => true,
+            'has_trial' => true,
+            'trial_ends_at' => $trialEnd,
+            'next_renewal_at' => $trialEnd,
+            'license_api_enabled' => true,
+            'license_code' => 'LIC-TEST-TRIAL',
+            'license_secret_hash' => Hash::make('secret-123'),
+        ]);
+
+        $this->withHeaders([
+            'X-License-Code' => 'LIC-TEST-TRIAL',
+            'X-License-Secret' => 'secret-123',
+        ])->getJson('/api/v1/license/status')
+            ->assertOk()
+            ->assertJsonPath('status', 'trial_active')
+            ->assertJsonPath('can_access', true)
+            ->assertJsonPath('days_remaining', 5)
+            ->assertJsonPath('expires_on', $trialEnd)
+            ->assertJsonPath('subscription.trial_days_remaining', 5)
+            ->assertJsonPath('subscription.renewal_days_remaining', 5);
     }
 }

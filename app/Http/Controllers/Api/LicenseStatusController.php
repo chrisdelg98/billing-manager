@@ -97,6 +97,8 @@ class LicenseStatusController extends Controller
             'status' => $status['status'],
             'can_access' => $status['can_access'],
             'reason_code' => $status['reason_code'],
+            'days_remaining' => $status['days_remaining'],
+            'expires_on' => $status['expires_on'],
             'checked_at' => now()->toIso8601String(),
             'service' => [
                 'name' => $subscription->service?->name,
@@ -110,7 +112,9 @@ class LicenseStatusController extends Controller
                 'is_active' => (bool) $subscription->is_active,
                 'has_trial' => (bool) $subscription->has_trial,
                 'trial_ends_at' => $subscription->trial_ends_at?->toDateString(),
+                'trial_days_remaining' => $status['trial_days_remaining'],
                 'next_renewal_at' => $subscription->next_renewal_at?->toDateString(),
+                'renewal_days_remaining' => $status['renewal_days_remaining'],
             ],
             'coverage' => [
                 'last_covered_period' => $latestCoveredPeriod ? substr((string) $latestCoveredPeriod, 0, 7) : null,
@@ -120,19 +124,37 @@ class LicenseStatusController extends Controller
 
     private function resolveStatus(Subscription $subscription): array
     {
+        $today = now()->startOfDay();
+
+        $trialDaysRemaining = $subscription->trial_ends_at
+            ? $today->diffInDays($subscription->trial_ends_at->copy()->startOfDay(), false)
+            : null;
+
+        $renewalDaysRemaining = $subscription->next_renewal_at
+            ? $today->diffInDays($subscription->next_renewal_at->copy()->startOfDay(), false)
+            : null;
+
         if (! $subscription->is_active) {
             return [
                 'status' => 'suspended',
                 'can_access' => false,
                 'reason_code' => 'subscription_inactive',
+                'days_remaining' => 0,
+                'expires_on' => null,
+                'trial_days_remaining' => $trialDaysRemaining,
+                'renewal_days_remaining' => $renewalDaysRemaining,
             ];
         }
 
-        if ($subscription->has_trial && $subscription->trial_ends_at && $subscription->trial_ends_at->copy()->endOfDay()->gte(now())) {
+        if ($subscription->has_trial && $subscription->trial_ends_at && $subscription->trial_ends_at->copy()->startOfDay()->gte($today)) {
             return [
                 'status' => 'trial_active',
                 'can_access' => true,
                 'reason_code' => 'trial_window',
+                'days_remaining' => max(0, (int) ($trialDaysRemaining ?? 0)),
+                'expires_on' => $subscription->trial_ends_at->toDateString(),
+                'trial_days_remaining' => $trialDaysRemaining,
+                'renewal_days_remaining' => $renewalDaysRemaining,
             ];
         }
 
@@ -141,14 +163,22 @@ class LicenseStatusController extends Controller
                 'status' => 'active',
                 'can_access' => true,
                 'reason_code' => 'no_renewal_limit',
+                'days_remaining' => null,
+                'expires_on' => null,
+                'trial_days_remaining' => $trialDaysRemaining,
+                'renewal_days_remaining' => null,
             ];
         }
 
-        if ($subscription->next_renewal_at->copy()->endOfDay()->lt(now())) {
+        if ($subscription->next_renewal_at->copy()->startOfDay()->lt($today)) {
             return [
                 'status' => 'overdue',
                 'can_access' => false,
                 'reason_code' => 'renewal_overdue',
+                'days_remaining' => 0,
+                'expires_on' => $subscription->next_renewal_at->toDateString(),
+                'trial_days_remaining' => $trialDaysRemaining,
+                'renewal_days_remaining' => $renewalDaysRemaining,
             ];
         }
 
@@ -156,6 +186,10 @@ class LicenseStatusController extends Controller
             'status' => 'active',
             'can_access' => true,
             'reason_code' => 'paid_current',
+            'days_remaining' => max(0, (int) ($renewalDaysRemaining ?? 0)),
+            'expires_on' => $subscription->next_renewal_at->toDateString(),
+            'trial_days_remaining' => $trialDaysRemaining,
+            'renewal_days_remaining' => $renewalDaysRemaining,
         ];
     }
 

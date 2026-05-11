@@ -50,6 +50,8 @@
                         <li>status (string)</li>
                         <li>can_access (boolean)</li>
                         <li>reason_code (string)</li>
+                        <li>days_remaining (number|null)</li>
+                        <li>expires_on (date|null)</li>
                         <li>checked_at (ISO8601)</li>
                     </ul>
                 </div>
@@ -77,7 +79,9 @@
                         <li>subscription.is_active (boolean)</li>
                         <li>subscription.has_trial (boolean)</li>
                         <li>subscription.trial_ends_at (date|null)</li>
+                        <li>subscription.trial_days_remaining (number|null)</li>
                         <li>subscription.next_renewal_at (date|null)</li>
+                        <li>subscription.renewal_days_remaining (number|null)</li>
                     </ul>
                 </div>
             </div>
@@ -91,6 +95,8 @@
   "status": "active",
   "can_access": true,
   "reason_code": "paid_current",
+    "days_remaining": 30,
+    "expires_on": "2026-06-10",
   "checked_at": "2026-05-11T14:20:00Z",
   "service": {
     "name": "Mi Servicio"
@@ -104,13 +110,20 @@
     "is_active": true,
     "has_trial": false,
     "trial_ends_at": null,
-    "next_renewal_at": "2026-06-10"
+    "trial_days_remaining": null,
+    "next_renewal_at": "2026-06-10",
+    "renewal_days_remaining": 30
   },
   "coverage": {
     "last_covered_period": "2026-05"
   }
 }</code></pre>
         </div>
+
+            <div class="rounded-xl border border-slate-200 bg-white p-5">
+                <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Regla de periodo de prueba</h3>
+                <p class="mt-3 text-sm text-slate-700">Si una suscripcion tiene periodo de prueba y no se define una fecha manual de renovacion, la fecha de renovacion se fija en la misma fecha fin de prueba. Esto evita dias extra de acceso y reduce confusion con el cliente final.</p>
+            </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-5">
             <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Codigos de error esperados</h3>

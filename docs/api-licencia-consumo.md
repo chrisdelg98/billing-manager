@@ -39,6 +39,8 @@ Campos principales:
 - status: string
 - can_access: boolean
 - reason_code: string
+- days_remaining: number|null (dias restantes para el limite vigente)
+- expires_on: date|null (fecha de vencimiento aplicable)
 - checked_at: datetime ISO8601
 - service.name: string|null
 - subscription.id: number
@@ -49,8 +51,14 @@ Campos principales:
 - subscription.is_active: boolean
 - subscription.has_trial: boolean
 - subscription.trial_ends_at: date|null
+- subscription.trial_days_remaining: number|null
 - subscription.next_renewal_at: date|null
+- subscription.renewal_days_remaining: number|null
 - coverage.last_covered_period: YYYY-MM|null
+
+Nota de negocio:
+
+- Si hay periodo de prueba y no se define una renovacion manual, la renovacion se fija en la misma fecha de fin de prueba (sin dias extra de gracia).
 
 ## 6) Estados funcionales
 
@@ -58,6 +66,12 @@ Campos principales:
 - trial_active: en prueba, acceso permitido
 - overdue: vencida, acceso denegado
 - suspended: suscripcion inactiva, acceso denegado
+
+Semantica de days_remaining:
+
+- trial_active: dias restantes hasta trial_ends_at
+- active: dias restantes hasta next_renewal_at (o null si no hay limite)
+- overdue/suspended: 0
 
 Regla de consumo recomendada:
 

@@ -631,10 +631,9 @@ class SubscriptionPaymentsFlowTest extends TestCase
         ]);
 
         $created = Subscription::query()->where('name', 'CLINEXUS CORE - PRUEBA')->firstOrFail();
-        $expectedRenewal = \Carbon\Carbon::parse($trialEnd)->addDay()->addMonthNoOverflow()->subDay()->toDateString();
 
         $this->assertSame($trialEnd, $created->trial_ends_at?->toDateString());
-        $this->assertSame($expectedRenewal, $created->next_renewal_at?->toDateString());
+        $this->assertSame($trialEnd, $created->next_renewal_at?->toDateString());
     }
 
     public function test_subscription_trial_respects_manual_next_renewal_override(): void
