@@ -188,4 +188,104 @@ class FinanceSnapshotsTest extends TestCase
             ->assertSee('20.00 USD')
             ->assertDontSee('50.00 USD');
     }
+
+    public function test_finance_filters_by_service_status_and_search(): void
+    {
+        $user = User::factory()->create();
+
+        $activeService = Service::query()->create([
+            'name' => 'Servicio Activo ROI',
+            'status' => 'active',
+        ]);
+
+        $inactiveService = Service::query()->create([
+            'name' => 'Servicio Inactivo Legacy',
+            'status' => 'paused',
+        ]);
+
+        Payment::query()->create([
+            'service_id' => $activeService->id,
+            'paid_at' => now()->startOfMonth()->toDateString(),
+            'amount' => 55,
+            'currency' => 'USD',
+            'method' => 'transfer',
+        ]);
+
+        Payment::query()->create([
+            'service_id' => $inactiveService->id,
+            'paid_at' => now()->startOfMonth()->toDateString(),
+            'amount' => 40,
+            'currency' => 'USD',
+            'method' => 'transfer',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('finanzas.index', [
+                'period' => now()->format('Y-m'),
+                'service_status' => 'active',
+                'q' => 'ROI',
+            ]))
+            ->assertOk()
+            ->assertSee('Servicio Activo ROI')
+            ->assertDontSee('Servicio Inactivo Legacy');
+    }
+
+    public function test_finance_profitability_filter_shows_only_negative_services_and_detail_actions(): void
+    {
+        $user = User::factory()->create();
+
+        $positiveService = Service::query()->create([
+            'name' => 'Servicio Ganador',
+            'status' => 'active',
+        ]);
+
+        $negativeService = Service::query()->create([
+            'name' => 'Servicio Perdida Controlada',
+            'status' => 'active',
+        ]);
+
+        $costItem = CostItem::query()->create([
+            'name' => 'Infra compartida',
+            'category' => 'infra',
+            'cost_type' => 'shared',
+            'amount' => 40,
+            'currency' => 'USD',
+            'billing_cycle' => 'monthly',
+            'is_active' => true,
+        ]);
+
+        $costItem->allocations()->createMany([
+            [
+                'service_id' => $positiveService->id,
+                'allocation_mode' => 'equal',
+                'weight' => null,
+                'is_active' => true,
+            ],
+            [
+                'service_id' => $negativeService->id,
+                'allocation_mode' => 'equal',
+                'weight' => null,
+                'is_active' => true,
+            ],
+        ]);
+
+        Payment::query()->create([
+            'service_id' => $positiveService->id,
+            'paid_at' => now()->startOfMonth()->addDay()->toDateString(),
+            'amount' => 90,
+            'currency' => 'USD',
+            'method' => 'transfer',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('finanzas.index', [
+                'period' => now()->format('Y-m'),
+                'profitability' => 'negative',
+            ]))
+            ->assertOk()
+            ->assertSee('Servicio Perdida Controlada')
+            ->assertDontSee('Servicio Ganador')
+            ->assertSee('clic para ver detalle')
+            ->assertSee('Comparativo rapido');
+    }
 }

@@ -64,6 +64,8 @@
                 'points' => [
                     'Ingreso real: pagos efectivamente cobrados.',
                     'Ingreso recurrente: proyeccion basada en suscripciones activas.',
+                    'Usa filtros por estado, rentabilidad y busqueda para encontrar focos rapidamente.',
+                    'Haz clic en un servicio para abrir detalle con desglose y grafico simple.',
                     'Generar snapshot: congela historico por periodo y servicio.',
                 ],
             ];
