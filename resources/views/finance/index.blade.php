@@ -89,7 +89,7 @@
                         <tbody class="divide-y divide-slate-100">
                             @forelse($costByCategory as $row)
                                 <tr>
-                                    <td class="px-4 py-3 font-medium text-slate-900">{{ ucfirst($row->category) }}</td>
+                                    <td class="px-4 py-3 font-medium text-slate-900">{{ \App\Models\CostItem::categoryLabelFromValue($row->category) }}</td>
                                     <td class="px-4 py-3 text-right text-slate-700">{{ number_format((float) $row->amount_total, 2) }} USD</td>
                                 </tr>
                             @empty

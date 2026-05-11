@@ -35,6 +35,16 @@
                 'new_order_id' => 'new_currency_order',
                 'new_label' => 'Nueva moneda (ISO 3 letras)',
             ],
+            [
+                'panel_key' => 'cost_categories',
+                'title' => 'Categorias de costos',
+                'subtitle' => 'Lista reutilizable para el campo Categoria en costos.',
+                'catalog_type' => 'cost_category',
+                'items' => $costCategoryOptions,
+                'new_name_id' => 'new_cost_category_name',
+                'new_order_id' => 'new_cost_category_order',
+                'new_label' => 'Nueva categoria de costo',
+            ],
         ];
     @endphp
 
@@ -43,7 +53,7 @@
             <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
         @endif
 
-        <div x-data="{ openPanel: @js(match (old('catalog_type')) { 'provider' => 'providers', 'currency' => 'currencies', default => 'types' }) }" class="space-y-4">
+        <div x-data="{ openPanel: @js(match (old('catalog_type')) { 'provider' => 'providers', 'currency' => 'currencies', 'cost_category' => 'cost_categories', default => 'types' }) }" class="space-y-4">
             @foreach ($sections as $section)
                 <section class="overflow-hidden rounded-xl border border-slate-200 bg-white">
                     <button

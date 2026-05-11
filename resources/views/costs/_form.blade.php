@@ -9,16 +9,27 @@
     $customEvery = (int) old('billing_custom_every', $customEveryBase);
     $customUnit = old('billing_custom_unit', $defaultCustomUnit);
     $selectedCurrency = strtoupper((string) old('currency', $costItem->currency ?? 'USD'));
+    $selectedCategory = (string) old('category', $costItem->category ?? 'Otro');
     $currencyOptions = collect($currencyOptions ?? ['USD'])
         ->map(fn ($code) => strtoupper((string) $code))
         ->filter(fn ($code) => $code !== '')
+        ->values();
+
+    $categoryOptions = collect($categoryOptions ?? ['Hosting', 'Licencia', 'Infraestructura', 'Otro'])
+        ->map(fn ($category) => trim((string) $category))
+        ->filter(fn ($category) => $category !== '')
         ->values();
 
     if (! $currencyOptions->contains($selectedCurrency)) {
         $currencyOptions->push($selectedCurrency);
     }
 
+    if (! $categoryOptions->contains($selectedCategory)) {
+        $categoryOptions->push($selectedCategory);
+    }
+
     $currencyOptions = $currencyOptions->unique()->values();
+    $categoryOptions = $categoryOptions->unique()->values();
 @endphp
 
 <div
@@ -33,12 +44,10 @@
 
     <div>
         <label for="category" class="mb-1 block text-sm font-medium text-slate-700">Categoria</label>
-        @php($category = old('category', $costItem->category ?? 'other'))
         <select id="category" name="category" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
-            <option value="hosting" @selected($category === 'hosting')>Hosting</option>
-            <option value="license" @selected($category === 'license')>Licencia</option>
-            <option value="infra" @selected($category === 'infra')>Infraestructura</option>
-            <option value="other" @selected($category === 'other')>Otro</option>
+            @foreach($categoryOptions as $categoryOption)
+                <option value="{{ $categoryOption }}" @selected($selectedCategory === $categoryOption)>{{ $categoryOption }}</option>
+            @endforeach
         </select>
         @error('category')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
@@ -93,12 +102,12 @@
                 <label for="billing_custom_unit" class="mb-1 block text-sm font-medium text-slate-700">Unidad</label>
                 <select id="billing_custom_unit" name="billing_custom_unit" x-model="customUnit" class="w-36 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
                     <option value="month">Meses</option>
-                    <option value="year">Anios</option>
+                    <option value="year">Años</option>
                 </select>
             </div>
         </div>
 
-        <p class="mt-2 text-xs text-slate-500">Ejemplo: 4 anios = se cobra cada 48 meses.</p>
+        <p class="mt-2 text-xs text-slate-500">Ejemplo: 4 años = se cobra cada 48 meses.</p>
         @error('billing_interval_months')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
         @error('billing_custom_every')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
         @error('billing_custom_unit')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror

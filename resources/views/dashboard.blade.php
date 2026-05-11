@@ -54,7 +54,7 @@
                         <div class="flex items-center justify-between px-4 py-3 text-sm">
                             <div>
                                 <p class="font-medium text-slate-900">{{ $cost->name }}</p>
-                                <p class="text-slate-500">{{ ucfirst($cost->category) }} · {{ number_format((float) $cost->amount, 2) }} {{ $cost->currency }} · {{ $cost->billingFrequencyLabel() }}</p>
+                                <p class="text-slate-500">{{ $cost->categoryLabel() }} · {{ number_format((float) $cost->amount, 2) }} {{ $cost->currency }} · {{ $cost->billingFrequencyLabel() }}</p>
                             </div>
                             <p class="text-slate-700">{{ $cost->next_renewal_at?->format('Y-m-d') }}</p>
                         </div>

@@ -35,10 +35,9 @@
 
                     <select name="category" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
                         <option value="">Todas las categorias</option>
-                        <option value="hosting" @selected(request('category') === 'hosting')>Hosting</option>
-                        <option value="license" @selected(request('category') === 'license')>Licencia</option>
-                        <option value="infra" @selected(request('category') === 'infra')>Infraestructura</option>
-                        <option value="other" @selected(request('category') === 'other')>Otro</option>
+                        @foreach(($categoryOptions ?? collect()) as $categoryOption)
+                            <option value="{{ $categoryOption }}" @selected(request('category') === $categoryOption)>{{ $categoryOption }}</option>
+                        @endforeach
                     </select>
 
                     <select name="cost_type" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
@@ -115,7 +114,7 @@
                                     <span class="mx-auto block h-12 w-1.5 rounded-full {{ $statusBarClass }}"></span>
                                 </td>
                                 <td class="px-4 py-3 font-medium text-slate-900">{{ $costItem->name }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ ucfirst($costItem->category) }}</td>
+                                <td class="px-4 py-3 text-slate-700">{{ $costItem->categoryLabel() }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ ucfirst($costItem->cost_type) }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ number_format((float) $costItem->amount, 2) }} {{ $costItem->currency }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $costItem->billingFrequencyLabel() }}</td>

@@ -19,6 +19,7 @@ class ServiceCatalogsTest extends TestCase
             ->get(route('catalogos.servicios.index'))
             ->assertOk()
             ->assertSee('Monedas')
+            ->assertSee('Categorias de costos')
             ->assertSee('USD');
     }
 
@@ -56,6 +57,25 @@ class ServiceCatalogsTest extends TestCase
             'catalog_type' => ServiceCatalogOption::TYPE_CURRENCY,
             'name' => 'COP',
             'sort_order' => 230,
+            'is_active' => 1,
+        ]);
+    }
+
+    public function test_user_can_add_cost_category_catalog_option(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('catalogos.servicios.store'), [
+            'catalog_type' => ServiceCatalogOption::TYPE_COST_CATEGORY,
+            'name' => 'Marketing',
+            'sort_order' => 240,
+            'is_active' => 1,
+        ])->assertRedirect(route('catalogos.servicios.index'));
+
+        $this->assertDatabaseHas('service_catalog_options', [
+            'catalog_type' => ServiceCatalogOption::TYPE_COST_CATEGORY,
+            'name' => 'Marketing',
+            'sort_order' => 240,
             'is_active' => 1,
         ]);
     }

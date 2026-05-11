@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('service_catalog_options', function (Blueprint $table) {
             $table->id();
-            $table->enum('catalog_type', ['service_type', 'provider', 'currency']);
+            $table->enum('catalog_type', ['service_type', 'provider', 'currency', 'cost_category']);
             $table->string('name', 120);
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
@@ -62,6 +62,11 @@ return new class extends Migration
             ['catalog_type' => 'currency', 'name' => 'EUR', 'sort_order' => 20, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['catalog_type' => 'currency', 'name' => 'DOP', 'sort_order' => 30, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
             ['catalog_type' => 'currency', 'name' => 'MXN', 'sort_order' => 40, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+
+            ['catalog_type' => 'cost_category', 'name' => 'Hosting', 'sort_order' => 10, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['catalog_type' => 'cost_category', 'name' => 'Licencia', 'sort_order' => 20, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['catalog_type' => 'cost_category', 'name' => 'Infraestructura', 'sort_order' => 30, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
+            ['catalog_type' => 'cost_category', 'name' => 'Otro', 'sort_order' => 40, 'is_active' => true, 'created_at' => $now, 'updated_at' => $now],
         ]);
     }
 

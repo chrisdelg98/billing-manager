@@ -7,6 +7,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CostItem extends Model
 {
+    private const LEGACY_CATEGORY_LABELS = [
+        'hosting' => 'Hosting',
+        'license' => 'Licencia',
+        'infra' => 'Infraestructura',
+        'other' => 'Otro',
+    ];
+
     protected $fillable = [
         'name',
         'category',
@@ -50,10 +57,26 @@ class CostItem extends Model
 
         if ($intervalMonths % 12 === 0) {
             $years = (int) ($intervalMonths / 12);
-            return 'Cada '.$years.' anio'.($years === 1 ? '' : 's');
+            return 'Cada '.$years.' año'.($years === 1 ? '' : 's');
         }
 
         return 'Cada '.$intervalMonths.' mes'.($intervalMonths === 1 ? '' : 'es');
+    }
+
+    public function categoryLabel(): string
+    {
+        return self::categoryLabelFromValue($this->category);
+    }
+
+    public static function categoryLabelFromValue(?string $category): string
+    {
+        $value = trim((string) $category);
+
+        if ($value === '') {
+            return '-';
+        }
+
+        return self::LEGACY_CATEGORY_LABELS[mb_strtolower($value)] ?? $value;
     }
 
     public function allocations(): HasMany

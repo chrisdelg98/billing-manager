@@ -42,11 +42,16 @@ class CostItemController extends Controller
         }
 
         if ($request->filled('category')) {
-            $category = (string) $request->string('category');
+            $rawCategory = trim((string) $request->string('category'));
+            $normalizedCategory = $this->normalizeCategoryInput($rawCategory);
 
-            if (in_array($category, ['hosting', 'license', 'infra', 'other'], true)) {
-                $query->where('category', $category);
-            }
+            $query->where(function ($builder) use ($rawCategory, $normalizedCategory): void {
+                $builder->where('category', $rawCategory);
+
+                if ($normalizedCategory !== $rawCategory) {
+                    $builder->orWhere('category', $normalizedCategory);
+                }
+            });
         }
 
         if ($request->filled('cost_type')) {
@@ -106,15 +111,17 @@ class CostItemController extends Controller
         }
 
         $costItems = $query->paginate(10)->withQueryString();
+        $categoryOptions = $this->costCategoryFilterOptions();
 
-        return view('costs.index', compact('costItems'));
+        return view('costs.index', compact('costItems', 'categoryOptions'));
     }
 
     public function create(): View
     {
         $currencyOptions = $this->activeCurrencyOptions();
+        $categoryOptions = $this->costCategoryFilterOptions();
 
-        return view('costs.create', compact('currencyOptions'));
+        return view('costs.create', compact('currencyOptions', 'categoryOptions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -128,8 +135,9 @@ class CostItemController extends Controller
     public function edit(CostItem $costItem): View
     {
         $currencyOptions = $this->activeCurrencyOptions();
+        $categoryOptions = $this->costCategoryFilterOptions();
 
-        return view('costs.edit', compact('costItem', 'currencyOptions'));
+        return view('costs.edit', compact('costItem', 'currencyOptions', 'categoryOptions'));
     }
 
     public function update(Request $request, CostItem $costItem): RedirectResponse
@@ -155,11 +163,19 @@ class CostItemController extends Controller
     {
         $request->merge([
             'currency' => strtoupper((string) $request->input('currency', '')),
+            'category' => $this->normalizeCategoryInput((string) $request->input('category', '')),
         ]);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'category' => ['required', 'in:hosting,license,infra,other'],
+            'category' => [
+                'required',
+                'string',
+                'max:120',
+                Rule::exists('service_catalog_options', 'name')->where(fn ($query) => $query
+                    ->where('catalog_type', ServiceCatalogOption::TYPE_COST_CATEGORY)
+                    ->where('is_active', true)),
+            ],
             'cost_type' => ['required', 'in:direct,shared'],
             'amount' => ['required', 'numeric', 'min:0'],
             'currency' => [
@@ -185,6 +201,19 @@ class CostItemController extends Controller
         unset($data['billing_custom_every'], $data['billing_custom_unit']);
 
         return $data;
+    }
+
+    private function normalizeCategoryInput(string $value): string
+    {
+        $trimmed = trim($value);
+
+        return match (mb_strtolower($trimmed)) {
+            'hosting' => 'Hosting',
+            'license' => 'Licencia',
+            'infra' => 'Infraestructura',
+            'other' => 'Otro',
+            default => $trimmed,
+        };
     }
 
     private function resolvedBillingIntervalMonths(array $data): int
@@ -223,5 +252,29 @@ class CostItemController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name');
+    }
+
+    private function costCategoryFilterOptions(): Collection
+    {
+        $catalogOptions = ServiceCatalogOption::query()
+            ->ofType(ServiceCatalogOption::TYPE_COST_CATEGORY)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name');
+
+        $existingCategories = CostItem::query()
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->orderBy('category')
+            ->distinct()
+            ->pluck('category');
+
+        return $catalogOptions
+            ->merge($existingCategories)
+            ->map(fn ($category) => trim((string) $category))
+            ->filter(fn ($category) => $category !== '')
+            ->unique()
+            ->values();
     }
 }

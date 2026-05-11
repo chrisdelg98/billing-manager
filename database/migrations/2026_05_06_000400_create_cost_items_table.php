@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('cost_items', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->enum('category', ['hosting', 'license', 'infra', 'other'])->default('other');
+            $table->string('category', 120)->default('Otro');
             $table->enum('cost_type', ['direct', 'shared'])->default('direct');
             $table->decimal('amount', 12, 2);
             $table->char('currency', 3)->default('USD');

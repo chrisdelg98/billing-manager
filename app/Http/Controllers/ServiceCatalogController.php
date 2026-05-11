@@ -33,7 +33,13 @@ class ServiceCatalogController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('catalogs.services', compact('typeOptions', 'providerOptions', 'currencyOptions'));
+        $costCategoryOptions = ServiceCatalogOption::query()
+            ->ofType(ServiceCatalogOption::TYPE_COST_CATEGORY)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        return view('catalogs.services', compact('typeOptions', 'providerOptions', 'currencyOptions', 'costCategoryOptions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -167,6 +173,7 @@ class ServiceCatalogController extends Controller
             ServiceCatalogOption::TYPE_SERVICE,
             ServiceCatalogOption::TYPE_PROVIDER,
             ServiceCatalogOption::TYPE_CURRENCY,
+            ServiceCatalogOption::TYPE_COST_CATEGORY,
         ];
     }
 

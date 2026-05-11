@@ -13,7 +13,7 @@ return new class extends Migration
         $driver = DB::getDriverName();
 
         if (in_array($driver, ['mysql', 'mariadb'], true)) {
-            DB::statement("ALTER TABLE service_catalog_options MODIFY COLUMN catalog_type ENUM('service_type','provider','currency') NOT NULL");
+            DB::statement("ALTER TABLE service_catalog_options MODIFY COLUMN catalog_type ENUM('service_type','provider','currency','cost_category') NOT NULL");
         }
 
         $now = now();
@@ -53,7 +53,7 @@ return new class extends Migration
         $driver = DB::getDriverName();
 
         if (in_array($driver, ['mysql', 'mariadb'], true)) {
-            DB::statement("ALTER TABLE service_catalog_options MODIFY COLUMN catalog_type ENUM('service_type','provider') NOT NULL");
+            DB::statement("ALTER TABLE service_catalog_options MODIFY COLUMN catalog_type ENUM('service_type','provider','cost_category') NOT NULL");
         }
     }
 };
