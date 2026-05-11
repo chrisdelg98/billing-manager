@@ -12,13 +12,56 @@
             <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
         @endif
 
+        @php
+            try {
+                $periodCursor = \Carbon\Carbon::createFromFormat('Y-m', $period)->startOfMonth();
+            } catch (\Throwable) {
+                $periodCursor = now()->startOfMonth();
+            }
+
+            $previousPeriod = $periodCursor->copy()->subMonthNoOverflow()->format('Y-m');
+            $nextPeriod = $periodCursor->copy()->addMonthNoOverflow()->format('Y-m');
+
+            $periodNavQuery = [
+                'q' => $filters['q'] ?? '',
+                'service_status' => $filters['service_status'] ?? 'all',
+                'profitability' => $filters['profitability'] ?? 'all',
+                'sort' => $filters['sort'] ?? 'margin_desc',
+                'limit' => $filters['limit'] ?? 20,
+            ];
+
+            if (! empty($filters['snapshot_only'])) {
+                $periodNavQuery['snapshot_only'] = '1';
+            }
+        @endphp
+
         <div class="rounded-xl border border-slate-200 bg-white p-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2">
                     <button type="button" class="ui-btn inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50" @click="openFilters()">
                         <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
                         <span>Filtros</span>
                     </button>
+
+                    <form method="GET" action="{{ route('finanzas.index') }}" class="inline-flex">
+                        @foreach($periodNavQuery as $key => $value)
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endforeach
+                        <input type="hidden" name="period" value="{{ $previousPeriod }}">
+                        <button type="submit" class="ui-btn inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition hover:bg-slate-50" title="Periodo anterior" aria-label="Periodo anterior">
+                            <x-heroicon-o-chevron-left class="h-4 w-4" />
+                        </button>
+                    </form>
+
+                    <form method="GET" action="{{ route('finanzas.index') }}" class="inline-flex">
+                        @foreach($periodNavQuery as $key => $value)
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endforeach
+                        <input type="hidden" name="period" value="{{ $nextPeriod }}">
+                        <button type="submit" class="ui-btn inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-300 text-slate-700 transition hover:bg-slate-50" title="Periodo siguiente" aria-label="Periodo siguiente">
+                            <x-heroicon-o-chevron-right class="h-4 w-4" />
+                        </button>
+                    </form>
 
                     <div class="text-xs text-slate-500">
                         <p>Periodo: <span class="font-semibold text-slate-700">{{ $period }}</span></p>
@@ -155,42 +198,64 @@
             </div>
         </div>
 
-        <div class="grid gap-6">
-            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div class="grid gap-6 xl:grid-cols-3">
+            <div class="overflow-hidden rounded-xl border border-slate-200 bg-white xl:col-span-2">
                 <div class="border-b border-slate-200 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-slate-900">Rendimiento por servicio (clic para ver detalle)</h3>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-slate-900">Rendimiento por servicio (clic para ver detalle)</h3>
+                        <div class="flex items-center gap-3 text-[11px] text-slate-500">
+                            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-emerald-400/70"></span>Activo</span>
+                            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-amber-400/70"></span>Pausado</span>
+                            <span class="inline-flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-slate-400/70"></span>Archivado</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-200 text-sm">
                         <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                             <tr>
+                                <th class="w-8 px-2 py-3"></th>
                                 <th class="px-4 py-3">Servicio</th>
-                                <th class="px-4 py-3">Estado</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap">Ingreso real</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap">Costo total</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap">Margen real</th>
-                                <th class="px-4 py-3 text-right whitespace-nowrap">Margen proyectado</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap">Ingreso</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap">Costo</th>
+                                <th class="px-4 py-3 text-right whitespace-nowrap">Margen</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             @forelse($serviceRows as $row)
+                                @php
+                                    $statusBarClass = match ($row['status']) {
+                                        'active' => 'bg-emerald-400/70',
+                                        'paused' => 'bg-amber-400/70',
+                                        default => 'bg-slate-400/70',
+                                    };
+                                @endphp
                                 <tr class="cursor-pointer transition hover:bg-slate-50" @click="openDetail({{ $row['service_id'] }})">
+                                    <td class="px-2 py-3 align-top">
+                                        <span class="mx-auto block h-12 w-1.5 rounded-full {{ $statusBarClass }}"></span>
+                                    </td>
                                     <td class="px-4 py-3">
                                         <p class="font-medium text-slate-900">{{ $row['name'] }}</p>
                                         <p class="mt-0.5 text-xs text-slate-500">{{ $row['provider'] !== '-' ? $row['provider'] : 'Sin proveedor' }}</p>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <span class="inline-flex rounded-full px-2 py-1 text-xs font-medium {{ $row['status'] === 'active' ? 'bg-emerald-100 text-emerald-700' : ($row['status'] === 'paused' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700') }}">
-                                            {{ $row['status'] === 'active' ? 'Activo' : ($row['status'] === 'paused' ? 'Pausado' : 'Archivado') }}
-                                        </span>
+                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                                        {{ number_format((float) $row['income_real'], 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
                                     </td>
-                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ number_format((float) $row['income_real'], 2) }} USD</td>
-                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ number_format((float) $row['total_cost'], 2) }} USD</td>
-                                    <td class="px-4 py-3 text-right font-semibold whitespace-nowrap {{ (float) $row['net_real_vs_cost'] >= 0 ? 'text-emerald-700' : 'text-red-700' }}">{{ number_format((float) $row['net_real_vs_cost'], 2) }} USD</td>
-                                    <td class="px-4 py-3 text-right font-semibold whitespace-nowrap {{ (float) $row['net_projected'] >= 0 ? 'text-emerald-700' : 'text-red-700' }}">{{ number_format((float) $row['net_projected'], 2) }} USD</td>
+                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                                        {{ number_format((float) $row['total_cost'], 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-semibold whitespace-nowrap {{ (float) $row['net_real_vs_cost'] >= 0 ? 'text-emerald-700' : 'text-red-700' }}">
+                                        {{ number_format((float) $row['net_real_vs_cost'], 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-slate-500">No hay servicios que cumplan los filtros seleccionados.</td></tr>
+                                <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">No hay servicios que cumplan los filtros seleccionados.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -213,7 +278,11 @@
                             @forelse($costByCategory as $row)
                                 <tr>
                                     <td class="px-4 py-3 font-medium text-slate-900">{{ \App\Models\CostItem::categoryLabelFromValue($row->category) }}</td>
-                                    <td class="px-4 py-3 text-right text-slate-700">{{ number_format((float) $row->amount_total, 2) }} USD</td>
+                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                                        {{ number_format((float) $row->amount_total, 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr><td colspan="2" class="px-4 py-8 text-center text-sm text-slate-500">Sin costos activos.</td></tr>
@@ -243,9 +312,21 @@
                             @forelse($currentSnapshots as $row)
                                 <tr>
                                     <td class="px-4 py-3 font-medium text-slate-900">{{ $row->service?->name ?? 'Servicio #'.$row->service_id }}</td>
-                                    <td class="px-4 py-3 text-right text-slate-700">{{ number_format((float) $row->income_total, 2) }} USD</td>
-                                    <td class="px-4 py-3 text-right text-slate-700">{{ number_format((float) $row->shared_cost_total, 2) }} USD</td>
-                                    <td class="px-4 py-3 text-right font-semibold {{ (float) $row->net_margin >= 0 ? 'text-emerald-700' : 'text-red-700' }}">{{ number_format((float) $row->net_margin, 2) }} USD</td>
+                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                                        {{ number_format((float) $row->income_total, 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                                        {{ number_format((float) $row->shared_cost_total, 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-semibold whitespace-nowrap {{ (float) $row->net_margin >= 0 ? 'text-emerald-700' : 'text-red-700' }}">
+                                        {{ number_format((float) $row->net_margin, 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr><td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">No hay snapshot generado para este periodo.</td></tr>
@@ -273,9 +354,21 @@
                             @forelse($snapshotHistory as $row)
                                 <tr>
                                     <td class="px-4 py-3 font-medium text-slate-900">{{ $row->period }}</td>
-                                    <td class="px-4 py-3 text-right text-slate-700">{{ number_format((float) $row->income_total, 2) }} USD</td>
-                                    <td class="px-4 py-3 text-right text-slate-700">{{ number_format((float) $row->shared_cost_total, 2) }} USD</td>
-                                    <td class="px-4 py-3 text-right font-semibold {{ (float) $row->net_margin >= 0 ? 'text-emerald-700' : 'text-red-700' }}">{{ number_format((float) $row->net_margin, 2) }} USD</td>
+                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                                        {{ number_format((float) $row->income_total, 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
+                                        {{ number_format((float) $row->shared_cost_total, 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-semibold whitespace-nowrap {{ (float) $row->net_margin >= 0 ? 'text-emerald-700' : 'text-red-700' }}">
+                                        {{ number_format((float) $row->net_margin, 2) }}
+                                        <span class="hidden sm:inline">USD</span>
+                                        <span class="sm:hidden" title="USD">$</span>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr><td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">Aun no hay historico de snapshots.</td></tr>
