@@ -1,0 +1,43 @@
+Options -Indexes
+
+# -- Bloquear archivos sensibles (Apache 2.2/2.4 compatible) ---
+<FilesMatch "^(?:\.env(?:\.example)?|artisan|composer\.(?:json|lock)|phpunit\.xml|package(?:-lock)?\.json|.*\.log)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Preservar headers usados por auth y CSRF
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+    RewriteCond %{HTTP:X-XSRF-Token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Bloquear directorios de Laravel (nunca deben ser accesibles por URL)
+    RewriteRule ^(app|bootstrap|config|core|database|modules|resources|routes|storage|tests|vendor)(/.*)?$ - [F,L,NC]
+
+    # Evitar loop si ya viene por /public
+    RewriteRule ^public/ - [L,NC]
+
+    # Si el archivo existe fisicamente en public/ -> servirlo directo (CSS, JS, imagenes)
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+    RewriteRule ^(.+)$ public/$1 [L]
+
+    # Todo lo demas -> front controller real de Laravel
+    RewriteRule ^ public/index.php [L]
+</IfModule>
+
+# -- Cabeceras de seguridad ----------------------------------------
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

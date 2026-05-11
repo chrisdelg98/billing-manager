@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentVoucherController;
+use App\Http\Controllers\MigrationToolController;
 use App\Http\Controllers\ServiceCatalogController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SubscriptionLicenseController;
@@ -22,6 +23,15 @@ Route::middleware('auth')->group(function () {
 
     Route::view('/documentacion/api', 'documentacion.api')
         ->name('documentacion.api');
+
+    Route::get('/herramientas/migraciones', [MigrationToolController::class, 'index'])
+        ->name('herramientas.migraciones.index');
+
+    Route::post('/herramientas/migraciones/ejecutar', [MigrationToolController::class, 'run'])
+        ->name('herramientas.migraciones.run');
+
+    Route::post('/herramientas/migraciones/baseline', [MigrationToolController::class, 'baseline'])
+        ->name('herramientas.migraciones.baseline');
 
     Route::resource('servicios', ServiceController::class)
         ->parameters(['servicios' => 'service'])

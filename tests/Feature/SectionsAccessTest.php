@@ -14,7 +14,9 @@ class SectionsAccessTest extends TestCase
 
     public function test_authenticated_user_can_open_all_section_indexes(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'role' => 'admin',
+        ]);
 
         $this->actingAs($user)->get(route('dashboard'))->assertOk();
         $this->actingAs($user)->get(route('servicios.index'))->assertOk();
@@ -22,6 +24,7 @@ class SectionsAccessTest extends TestCase
         $this->actingAs($user)->get(route('pagos.index'))->assertOk();
         $this->actingAs($user)->get(route('costos.index'))->assertOk();
         $this->actingAs($user)->get(route('finanzas.index'))->assertOk();
+        $this->actingAs($user)->get(route('herramientas.migraciones.index'))->assertOk();
     }
 
     public function test_user_can_create_service_subscription_payment_and_cost(): void

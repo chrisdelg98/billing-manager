@@ -87,6 +87,16 @@
                     'Maneja errores 401, 403, 404, 422 y 429 segun el caso.',
                 ],
             ];
+        } elseif (request()->routeIs('herramientas.migraciones.*')) {
+            $sectionHelp = [
+                'title' => 'Como usar Migraciones',
+                'summary' => 'Permite ejecutar migraciones desde interfaz cuando no tienes acceso SSH.',
+                'points' => [
+                    'Solo usuarios admin pueden ejecutar esta herramienta.',
+                    'La pantalla muestra migraciones pendientes y aplicadas.',
+                    'Ejecutar migraciones aplica cambios de esquema y datos en base de datos.',
+                ],
+            ];
         }
     @endphp
     <head>
