@@ -104,6 +104,16 @@
                 <x-heroicon-o-rectangle-stack class="h-5 w-5 shrink-0" />
                 <span x-show="sidebarExpanded || mobileSidebarOpen" x-transition.opacity>Catalogos</span>
             </a>
+
+            <a
+                href="{{ route('documentacion.api') }}"
+                title="Documentacion API"
+                class="ui-btn flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition {{ request()->routeIs('documentacion.api*') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' }}"
+                :class="sidebarExpanded || mobileSidebarOpen ? 'justify-start' : 'justify-center'"
+            >
+                <x-heroicon-o-information-circle class="h-5 w-5 shrink-0" />
+                <span x-show="sidebarExpanded || mobileSidebarOpen" x-transition.opacity>Documentacion API</span>
+            </a>
         </div>
     </div>
 

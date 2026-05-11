@@ -77,6 +77,16 @@
                     'Activa/Inactiva para controlar que aparece en formularios.',
                 ],
             ];
+        } elseif (request()->routeIs('documentacion.api*')) {
+            $sectionHelp = [
+                'title' => 'Como consumir la API',
+                'summary' => 'Esta seccion muestra endpoint, headers, respuestas y codigos de error.',
+                'points' => [
+                    'Usa GET /api/v1/license/status con headers X-License-Code y X-License-Secret.',
+                    'Permite acceso solo cuando can_access sea true.',
+                    'Maneja errores 401, 403, 404, 422 y 429 segun el caso.',
+                ],
+            ];
         }
     @endphp
     <head>

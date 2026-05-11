@@ -20,6 +20,9 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::view('/documentacion/api', 'documentacion.api')
+        ->name('documentacion.api');
+
     Route::resource('servicios', ServiceController::class)
         ->parameters(['servicios' => 'service'])
         ->except(['show']);
