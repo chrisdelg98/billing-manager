@@ -379,25 +379,26 @@
             </div>
         </div>
 
-        <div
-            x-cloak
-            x-show="detailOpen"
-            x-transition.opacity
-            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4"
-            @click.self="closeDetail()"
-        >
-            <div class="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
-                    <div>
-                        <h3 class="text-base font-semibold text-slate-900" x-text="detail?.name ?? 'Detalle de servicio'"></h3>
-                        <p class="mt-1 text-sm text-slate-600" x-text="detailSummary()"></p>
+        <template x-teleport="body">
+            <div
+                x-cloak
+                x-show="detailOpen"
+                x-transition.opacity
+                class="fixed inset-0 z-[80] overflow-y-auto bg-slate-900/40 p-4 sm:p-6"
+                @click.self="closeDetail()"
+            >
+                <div class="mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                    <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-slate-900" x-text="detail?.name ?? 'Detalle de servicio'"></h3>
+                            <p class="mt-1 text-sm text-slate-600" x-text="detailSummary()"></p>
+                        </div>
+                        <button type="button" class="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50" @click="closeDetail()" aria-label="Cerrar">
+                            <x-heroicon-o-x-mark class="h-4 w-4" />
+                        </button>
                     </div>
-                    <button type="button" class="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-slate-50" @click="closeDetail()" aria-label="Cerrar">
-                        <x-heroicon-o-x-mark class="h-4 w-4" />
-                    </button>
-                </div>
 
-                <div class="max-h-[80vh] overflow-y-auto p-5 space-y-5" x-show="detail">
+                    <div class="max-h-[80vh] overflow-y-auto p-5 space-y-5" x-show="detail">
                     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                         <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
                             <p class="text-xs uppercase tracking-wide text-slate-500">Ingreso real</p>
@@ -540,9 +541,10 @@
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </template>
     </div>
 
     <script>
@@ -554,15 +556,11 @@
                 detail: null,
                 openFilters() {
                     this.filtersOpen = true;
-
-                    document.documentElement.classList.add('overflow-hidden');
-                    document.body.classList.add('overflow-hidden');
+                    this.syncScrollLock();
                 },
                 closeFilters() {
                     this.filtersOpen = false;
-
-                    document.documentElement.classList.remove('overflow-hidden');
-                    document.body.classList.remove('overflow-hidden');
+                    this.syncScrollLock();
                 },
                 openDetail(serviceId) {
                     const selected = this.services.find((row) => Number(row.service_id) === Number(serviceId));
@@ -572,9 +570,17 @@
 
                     this.detail = selected;
                     this.detailOpen = true;
+                    this.syncScrollLock();
                 },
                 closeDetail() {
                     this.detailOpen = false;
+                    this.syncScrollLock();
+                },
+                syncScrollLock() {
+                    const shouldLock = this.filtersOpen || this.detailOpen;
+
+                    document.documentElement.classList.toggle('overflow-hidden', shouldLock);
+                    document.body.classList.toggle('overflow-hidden', shouldLock);
                 },
                 formatMoney(value) {
                     const amount = Number(value || 0);
