@@ -29,6 +29,7 @@ class FinanceController extends Controller
         }
 
         $periodEnd = $periodStart->copy()->endOfMonth();
+        $projectionDate = $periodStart->copy()->startOfDay();
 
         $filters = [
             'q' => trim((string) $request->input('q', '')),
@@ -65,15 +66,8 @@ class FinanceController extends Controller
         $projectedRecurringIncome = (float) Subscription::query()
             ->where('is_active', true)
             ->get()
-            ->sum(function (Subscription $subscription) {
-                if ($subscription->isInTrial()) {
-                    return 0;
-                }
-
-                return match ($subscription->billing_cycle) {
-                    'yearly' => (float) $subscription->amount / 12,
-                    default => (float) $subscription->amount,
-                };
+            ->sum(function (Subscription $subscription) use ($projectionDate): float {
+                return $this->projectedRecurringAmountForSubscription($subscription, $projectionDate);
             });
 
         $projectedCosts = (float) CostItem::query()
@@ -101,16 +95,9 @@ class FinanceController extends Controller
                 ->whereIn('service_id', $serviceIds)
                 ->get()
                 ->groupBy('service_id')
-                ->map(function (Collection $subscriptions): float {
-                    return (float) $subscriptions->sum(function (Subscription $subscription): float {
-                        if ($subscription->isInTrial()) {
-                            return 0;
-                        }
-
-                        return match ($subscription->billing_cycle) {
-                            'yearly' => (float) $subscription->amount / 12,
-                            default => (float) $subscription->amount,
-                        };
+                ->map(function (Collection $subscriptions) use ($projectionDate): float {
+                    return (float) $subscriptions->sum(function (Subscription $subscription) use ($projectionDate): float {
+                        return $this->projectedRecurringAmountForSubscription($subscription, $projectionDate);
                     });
                 });
 
@@ -380,6 +367,18 @@ class FinanceController extends Controller
         $items[$costItem->id]['allocated_share'] = round((float) $items[$costItem->id]['allocated_share'] + $share, 2);
 
         $result[$serviceId]['items'] = $items;
+    }
+
+    private function projectedRecurringAmountForSubscription(Subscription $subscription, Carbon $projectionDate): float
+    {
+        if ($subscription->isInTrial($projectionDate)) {
+            return 0;
+        }
+
+        return match ($subscription->billing_cycle) {
+            'yearly' => (float) $subscription->amount / 12,
+            default => (float) $subscription->amount,
+        };
     }
 
     /**

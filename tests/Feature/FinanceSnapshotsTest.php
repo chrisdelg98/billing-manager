@@ -189,6 +189,36 @@ class FinanceSnapshotsTest extends TestCase
             ->assertDontSee('50.00 USD');
     }
 
+    public function test_finance_projection_includes_trial_subscription_after_trial_period(): void
+    {
+        $user = User::factory()->create();
+
+        $service = Service::query()->create([
+            'name' => 'Servicio Trial Futuro',
+            'status' => 'active',
+        ]);
+
+        $trialEnd = now()->startOfMonth()->addDays(10);
+
+        Subscription::query()->create([
+            'service_id' => $service->id,
+            'name' => 'Plan en prueba',
+            'billing_cycle' => 'monthly',
+            'amount' => 30,
+            'currency' => 'USD',
+            'has_trial' => true,
+            'trial_ends_at' => $trialEnd->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $nextPeriod = now()->startOfMonth()->addMonthNoOverflow()->format('Y-m');
+
+        $this->actingAs($user)
+            ->get(route('finanzas.index', ['period' => $nextPeriod]))
+            ->assertOk()
+            ->assertSee('30.00 USD');
+    }
+
     public function test_finance_filters_by_service_status_and_search(): void
     {
         $user = User::factory()->create();

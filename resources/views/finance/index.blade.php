@@ -181,7 +181,11 @@
                 <p class="mt-2 text-2xl font-semibold text-slate-900">{{ number_format($incomeReal, 2) }} USD</p>
             </div>
             <div class="rounded-xl border border-slate-200 bg-white p-4">
-                <p class="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Ingreso recurrente</p>
+                <p class="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Costo real</p>
+                <p class="mt-2 text-2xl font-semibold {{ $realVsCost >= 0 ? 'text-emerald-700' : 'text-red-700' }}">{{ number_format($realVsCost, 2) }} USD</p>
+            </div>
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <p class="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Ingresos proyectados</p>
                 <p class="mt-2 text-2xl font-semibold text-slate-900">{{ number_format($projectedRecurringIncome, 2) }} USD</p>
             </div>
             <div class="rounded-xl border border-slate-200 bg-white p-4">
@@ -191,10 +195,6 @@
             <div class="rounded-xl border border-slate-200 bg-white p-4">
                 <p class="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Margen proyectado</p>
                 <p class="mt-2 text-2xl font-semibold {{ $netProjected >= 0 ? 'text-emerald-700' : 'text-red-700' }}">{{ number_format($netProjected, 2) }} USD</p>
-            </div>
-            <div class="rounded-xl border border-slate-200 bg-white p-4">
-                <p class="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Real - costo</p>
-                <p class="mt-2 text-2xl font-semibold {{ $realVsCost >= 0 ? 'text-emerald-700' : 'text-red-700' }}">{{ number_format($realVsCost, 2) }} USD</p>
             </div>
         </div>
 
@@ -404,7 +404,7 @@
                             <p class="mt-1 text-lg font-semibold text-slate-900" x-text="formatMoney(detail?.income_real)"></p>
                         </div>
                         <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                            <p class="text-xs uppercase tracking-wide text-slate-500">Ingreso recurrente</p>
+                            <p class="text-xs uppercase tracking-wide text-slate-500">Ingresos proyectados</p>
                             <p class="mt-1 text-lg font-semibold text-slate-900" x-text="formatMoney(detail?.income_recurring_projected)"></p>
                         </div>
                         <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
