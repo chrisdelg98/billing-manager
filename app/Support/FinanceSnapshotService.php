@@ -70,21 +70,35 @@ class FinanceSnapshotService
 
         $costItems = CostItem::query()
             ->where('is_active', true)
-            ->with(['allocations' => function ($query) {
-                $query->where('is_active', true);
-            }])
+            ->with([
+                'allocations' => function ($query) {
+                    $query->where('is_active', true);
+                },
+                'subscription:id,service_id',
+            ])
             ->get();
 
         foreach ($costItems as $costItem) {
-            $allocations = $costItem->allocations;
-
-            if ($allocations->isEmpty()) {
-                continue;
-            }
-
             $amount = $costItem->monthlyAmount();
 
             if ($amount <= 0) {
+                continue;
+            }
+
+            if ((string) $costItem->cost_type === 'direct') {
+                $serviceId = $this->resolveDirectCostServiceId($costItem);
+
+                if ($serviceId !== null) {
+                    $allocatedTotals[$serviceId]['direct'] =
+                        ($allocatedTotals[$serviceId]['direct'] ?? 0) + $amount;
+                }
+
+                continue;
+            }
+
+            $allocations = $costItem->allocations;
+
+            if ($allocations->isEmpty()) {
                 continue;
             }
 
@@ -118,6 +132,21 @@ class FinanceSnapshotService
         }
 
         return $allocatedTotals;
+    }
+
+    private function resolveDirectCostServiceId(CostItem $costItem): ?int
+    {
+        if (! empty($costItem->service_id)) {
+            return (int) $costItem->service_id;
+        }
+
+        if (! empty($costItem->subscription_id)) {
+            $serviceId = (int) ($costItem->subscription?->service_id ?? 0);
+
+            return $serviceId > 0 ? $serviceId : null;
+        }
+
+        return null;
     }
 
     private function applyEqualSplit(Collection $allocations, float $amount, string $bucket, array &$allocatedTotals): void

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CostItem extends Model
@@ -18,6 +19,9 @@ class CostItem extends Model
         'name',
         'category',
         'cost_type',
+        'target_scope',
+        'service_id',
+        'subscription_id',
         'amount',
         'currency',
         'billing_cycle',
@@ -32,6 +36,8 @@ class CostItem extends Model
             'amount' => 'decimal:2',
             'billing_interval_months' => 'integer',
             'next_renewal_at' => 'date',
+            'service_id' => 'integer',
+            'subscription_id' => 'integer',
             'is_active' => 'boolean',
         ];
     }
@@ -82,5 +88,15 @@ class CostItem extends Model
     public function allocations(): HasMany
     {
         return $this->hasMany(CostAllocation::class);
+    }
+
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(Service::class);
+    }
+
+    public function subscription(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class);
     }
 }

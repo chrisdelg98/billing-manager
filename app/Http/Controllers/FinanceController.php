@@ -273,23 +273,36 @@ class FinanceController extends Controller
 
         $costItems = CostItem::query()
             ->where('is_active', true)
-            ->with(['allocations' => function ($query) {
-                $query->where('is_active', true);
-            }])
+            ->with([
+                'allocations' => function ($query) {
+                    $query->where('is_active', true);
+                },
+                'subscription:id,service_id',
+            ])
             ->get();
 
         foreach ($costItems as $costItem) {
+            $amount = $costItem->monthlyAmount();
+
+            if ($amount <= 0) {
+                continue;
+            }
+
+            if ((string) $costItem->cost_type === 'direct') {
+                $directServiceId = $this->resolveDirectCostServiceId($costItem);
+
+                if ($directServiceId !== null && isset($serviceLookup[$directServiceId])) {
+                    $this->addCostShareToServiceResult($result, $directServiceId, 'direct_cost', $amount, $costItem);
+                }
+
+                continue;
+            }
+
             $allocations = $costItem->allocations
                 ->filter(fn ($allocation) => isset($serviceLookup[(int) $allocation->service_id]))
                 ->values();
 
             if ($allocations->isEmpty()) {
-                continue;
-            }
-
-            $amount = $costItem->monthlyAmount();
-
-            if ($amount <= 0) {
                 continue;
             }
 
@@ -334,6 +347,21 @@ class FinanceController extends Controller
         }
 
         return $result;
+    }
+
+    private function resolveDirectCostServiceId(CostItem $costItem): ?int
+    {
+        if (! empty($costItem->service_id)) {
+            return (int) $costItem->service_id;
+        }
+
+        if (! empty($costItem->subscription_id)) {
+            $serviceId = (int) ($costItem->subscription?->service_id ?? 0);
+
+            return $serviceId > 0 ? $serviceId : null;
+        }
+
+        return null;
     }
 
     /**

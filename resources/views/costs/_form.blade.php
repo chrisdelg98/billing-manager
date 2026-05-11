@@ -8,11 +8,23 @@
     $customEveryBase = $defaultCustomUnit === 'year' ? max((int) ($intervalMonths / 12), 1) : $intervalMonths;
     $customEvery = (int) old('billing_custom_every', $customEveryBase);
     $customUnit = old('billing_custom_unit', $defaultCustomUnit);
+    $costType = old('cost_type', $costItem->cost_type ?? 'direct');
+    $targetScope = old('target_scope', $costItem->target_scope ?? ($costType === 'shared' ? 'general' : 'service'));
+    $selectedServiceId = (int) old('service_id', $costItem->service_id ?? 0);
+    $selectedSubscriptionId = (int) old('subscription_id', $costItem->subscription_id ?? 0);
     $selectedCurrency = strtoupper((string) old('currency', $costItem->currency ?? 'USD'));
     $selectedCategory = (string) old('category', $costItem->category ?? 'Otro');
     $currencyOptions = collect($currencyOptions ?? ['USD'])
         ->map(fn ($code) => strtoupper((string) $code))
         ->filter(fn ($code) => $code !== '')
+        ->values();
+
+    $services = collect($services ?? [])
+        ->filter(fn ($service) => isset($service->id, $service->name))
+        ->values();
+
+    $subscriptions = collect($subscriptions ?? [])
+        ->filter(fn ($subscription) => isset($subscription->id, $subscription->name))
         ->values();
 
     $categoryOptions = collect($categoryOptions ?? ['Hosting', 'Licencia', 'Infraestructura', 'Otro'])
@@ -33,7 +45,7 @@
 @endphp
 
 <div
-    x-data="{ billingCycle: @js($billingCycle), customEvery: {{ max($customEvery, 1) }}, customUnit: @js($customUnit) }"
+    x-data="{ billingCycle: @js($billingCycle), customEvery: {{ max($customEvery, 1) }}, customUnit: @js($customUnit), costType: @js($costType), targetScope: @js($targetScope) }"
     class="grid gap-5 sm:grid-cols-2"
 >
     <div class="sm:col-span-2">
@@ -54,12 +66,48 @@
 
     <div>
         <label for="cost_type" class="mb-1 block text-sm font-medium text-slate-700">Tipo de costo</label>
-        @php($costType = old('cost_type', $costItem->cost_type ?? 'direct'))
-        <select id="cost_type" name="cost_type" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
+        <select id="cost_type" name="cost_type" x-model="costType" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200">
             <option value="direct" @selected($costType === 'direct')>Directo</option>
             <option value="shared" @selected($costType === 'shared')>Compartido</option>
         </select>
         @error('cost_type')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
+    <div x-show="costType === 'direct'" x-cloak>
+        <label for="target_scope" class="mb-1 block text-sm font-medium text-slate-700">Aplica a</label>
+        <select id="target_scope" name="target_scope" x-model="targetScope" x-bind:disabled="costType !== 'direct'" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:bg-slate-100">
+            <option value="general">General</option>
+            <option value="service">Servicio especifico</option>
+            <option value="subscription">Suscripcion especifica</option>
+        </select>
+        <p class="mt-1 text-xs text-slate-500">Usa Suscripcion especifica para costos que aplican solo a una suscripcion dentro de un servicio.</p>
+        @error('target_scope')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
+    <input type="hidden" name="target_scope" value="general" x-bind:disabled="costType === 'direct'">
+
+    <div x-show="costType === 'direct' && targetScope === 'service'" x-cloak>
+        <label for="service_id" class="mb-1 block text-sm font-medium text-slate-700">Servicio objetivo</label>
+        <select id="service_id" name="service_id" x-bind:disabled="!(costType === 'direct' && targetScope === 'service')" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:bg-slate-100">
+            <option value="">Selecciona un servicio</option>
+            @foreach($services as $service)
+                <option value="{{ $service->id }}" @selected($selectedServiceId === (int) $service->id)>{{ $service->name }}</option>
+            @endforeach
+        </select>
+        @error('service_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
+    </div>
+
+    <div x-show="costType === 'direct' && targetScope === 'subscription'" x-cloak>
+        <label for="subscription_id" class="mb-1 block text-sm font-medium text-slate-700">Suscripcion objetivo</label>
+        <select id="subscription_id" name="subscription_id" x-bind:disabled="!(costType === 'direct' && targetScope === 'subscription')" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:bg-slate-100">
+            <option value="">Selecciona una suscripcion</option>
+            @foreach($subscriptions as $subscription)
+                <option value="{{ $subscription->id }}" @selected($selectedSubscriptionId === (int) $subscription->id)>
+                    {{ $subscription->name }}{{ $subscription->service ? ' - '.$subscription->service->name : '' }}
+                </option>
+            @endforeach
+        </select>
+        @error('subscription_id')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
     </div>
 
     <div>

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\CostItem;
+use App\Models\Service;
 use App\Models\ServiceCatalogOption;
+use App\Models\Subscription;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -120,8 +122,10 @@ class CostItemController extends Controller
     {
         $currencyOptions = $this->activeCurrencyOptions();
         $categoryOptions = $this->costCategoryFilterOptions();
+        $services = $this->serviceOptions();
+        $subscriptions = $this->subscriptionOptions();
 
-        return view('costs.create', compact('currencyOptions', 'categoryOptions'));
+        return view('costs.create', compact('currencyOptions', 'categoryOptions', 'services', 'subscriptions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -136,13 +140,20 @@ class CostItemController extends Controller
     {
         $currencyOptions = $this->activeCurrencyOptions();
         $categoryOptions = $this->costCategoryFilterOptions();
+        $services = $this->serviceOptions();
+        $subscriptions = $this->subscriptionOptions();
 
-        return view('costs.edit', compact('costItem', 'currencyOptions', 'categoryOptions'));
+        return view('costs.edit', compact('costItem', 'currencyOptions', 'categoryOptions', 'services', 'subscriptions'));
     }
 
     public function update(Request $request, CostItem $costItem): RedirectResponse
     {
         $costItem->update($this->validatedData($request));
+
+        if ($costItem->cost_type !== 'shared') {
+            $costItem->allocations()->delete();
+        }
+
         AuditLogger::log('updated', 'cost_item', $costItem->id, ['name' => $costItem->name]);
 
         return redirect()->route('costos.index')->with('status', 'Costo actualizado correctamente.');
@@ -177,6 +188,9 @@ class CostItemController extends Controller
                     ->where('is_active', true)),
             ],
             'cost_type' => ['required', 'in:direct,shared'],
+            'target_scope' => ['nullable', 'in:general,service,subscription'],
+            'service_id' => ['nullable', 'integer', 'exists:services,id'],
+            'subscription_id' => ['nullable', 'integer', 'exists:subscriptions,id'],
             'amount' => ['required', 'numeric', 'min:0'],
             'currency' => [
                 'required',
@@ -197,6 +211,7 @@ class CostItemController extends Controller
         $data['currency'] = strtoupper((string) $data['currency']);
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
 
+        $data = $this->resolvedTargetScopeData($data);
         $data['billing_interval_months'] = $this->resolvedBillingIntervalMonths($data);
         unset($data['billing_custom_every'], $data['billing_custom_unit']);
 
@@ -244,6 +259,54 @@ class CostItemController extends Controller
         return $intervalMonths;
     }
 
+    private function resolvedTargetScopeData(array $data): array
+    {
+        $scope = (string) ($data['target_scope'] ?? 'general');
+        $scope = in_array($scope, ['general', 'service', 'subscription'], true) ? $scope : 'general';
+
+        if ($data['cost_type'] === 'shared') {
+            $data['target_scope'] = 'general';
+            $data['service_id'] = null;
+            $data['subscription_id'] = null;
+
+            return $data;
+        }
+
+        if ($scope === 'service') {
+            if (empty($data['service_id'])) {
+                throw ValidationException::withMessages([
+                    'service_id' => 'Selecciona el servicio al que aplica este costo directo.',
+                ]);
+            }
+
+            $data['target_scope'] = 'service';
+            $data['service_id'] = (int) $data['service_id'];
+            $data['subscription_id'] = null;
+
+            return $data;
+        }
+
+        if ($scope === 'subscription') {
+            if (empty($data['subscription_id'])) {
+                throw ValidationException::withMessages([
+                    'subscription_id' => 'Selecciona la suscripcion a la que aplica este costo directo.',
+                ]);
+            }
+
+            $data['target_scope'] = 'subscription';
+            $data['service_id'] = null;
+            $data['subscription_id'] = (int) $data['subscription_id'];
+
+            return $data;
+        }
+
+        $data['target_scope'] = 'general';
+        $data['service_id'] = null;
+        $data['subscription_id'] = null;
+
+        return $data;
+    }
+
     private function activeCurrencyOptions(): Collection
     {
         return ServiceCatalogOption::query()
@@ -276,5 +339,20 @@ class CostItemController extends Controller
             ->filter(fn ($category) => $category !== '')
             ->unique()
             ->values();
+    }
+
+    private function serviceOptions(): Collection
+    {
+        return Service::query()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+
+    private function subscriptionOptions(): Collection
+    {
+        return Subscription::query()
+            ->with('service:id,name')
+            ->orderBy('name')
+            ->get(['id', 'service_id', 'name', 'is_active']);
     }
 }

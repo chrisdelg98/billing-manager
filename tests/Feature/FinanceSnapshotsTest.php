@@ -131,6 +131,101 @@ class FinanceSnapshotsTest extends TestCase
         ]);
     }
 
+    public function test_snapshot_command_allocates_direct_cost_scoped_to_service(): void
+    {
+        $serviceA = Service::query()->create([
+            'name' => 'Servicio A',
+            'status' => 'active',
+        ]);
+
+        $serviceB = Service::query()->create([
+            'name' => 'Servicio B',
+            'status' => 'active',
+        ]);
+
+        CostItem::query()->create([
+            'name' => 'Dominio Servicio A',
+            'category' => 'Infraestructura',
+            'cost_type' => 'direct',
+            'target_scope' => 'service',
+            'service_id' => $serviceA->id,
+            'amount' => 24,
+            'currency' => 'USD',
+            'billing_cycle' => 'yearly',
+            'billing_interval_months' => 12,
+            'is_active' => true,
+        ]);
+
+        $period = now()->format('Y-m');
+
+        $this->artisan('finance:snapshots', ['period' => $period])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('monthly_snapshots', [
+            'period' => $period,
+            'service_id' => $serviceA->id,
+            'direct_cost_total' => '2.00',
+        ]);
+
+        $this->assertDatabaseHas('monthly_snapshots', [
+            'period' => $period,
+            'service_id' => $serviceB->id,
+            'direct_cost_total' => '0.00',
+        ]);
+    }
+
+    public function test_snapshot_command_allocates_direct_cost_scoped_to_subscription_owner_service(): void
+    {
+        $serviceA = Service::query()->create([
+            'name' => 'Servicio A',
+            'status' => 'active',
+        ]);
+
+        $serviceB = Service::query()->create([
+            'name' => 'Servicio B',
+            'status' => 'active',
+        ]);
+
+        $subscriptionA = Subscription::query()->create([
+            'service_id' => $serviceA->id,
+            'name' => 'Suscripcion Tienda A',
+            'billing_cycle' => 'monthly',
+            'amount' => 30,
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+
+        CostItem::query()->create([
+            'name' => 'Dominio Tienda A',
+            'category' => 'Infraestructura',
+            'cost_type' => 'direct',
+            'target_scope' => 'subscription',
+            'subscription_id' => $subscriptionA->id,
+            'amount' => 10,
+            'currency' => 'USD',
+            'billing_cycle' => 'monthly',
+            'billing_interval_months' => 1,
+            'is_active' => true,
+        ]);
+
+        $period = now()->format('Y-m');
+
+        $this->artisan('finance:snapshots', ['period' => $period])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('monthly_snapshots', [
+            'period' => $period,
+            'service_id' => $serviceA->id,
+            'direct_cost_total' => '10.00',
+        ]);
+
+        $this->assertDatabaseHas('monthly_snapshots', [
+            'period' => $period,
+            'service_id' => $serviceB->id,
+            'direct_cost_total' => '0.00',
+        ]);
+    }
+
     public function test_custom_cost_interval_is_prorated_in_finance_projection(): void
     {
         $user = User::factory()->create();
