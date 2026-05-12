@@ -4,8 +4,13 @@
     </x-slot>
 
     <div class="space-y-6">
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
-            <form method="GET" action="{{ route('costos.index') }}" class="space-y-3">
+        <div class="mobile-filters-shell rounded-xl border border-slate-200 bg-white p-4" x-data="{ mobileFiltersOpen: false }">
+            <button type="button" class="mobile-filters-toggle ui-btn mb-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50" @click="mobileFiltersOpen = !mobileFiltersOpen" :aria-expanded="mobileFiltersOpen.toString()">
+                <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
+                <span x-text="mobileFiltersOpen ? 'Ocultar filtros' : 'Mostrar filtros'"></span>
+            </button>
+
+            <form method="GET" action="{{ route('costos.index') }}" class="space-y-3" x-show="mobileFiltersOpen" x-transition.opacity.duration.150ms x-cloak>
                 <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                     <div class="w-full lg:max-w-xl">
                         <input
@@ -90,16 +95,16 @@
 
         <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <table class="mobile-table-compact min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                         <tr>
                             <th class="w-8 px-2 py-3"></th>
-                            <th class="px-4 py-3">Nombre</th>
-                            <th class="px-4 py-3">Categoria</th>
+                            <th class="mobile-col-main px-4 py-3">Nombre</th>
+                            <th class="mobile-col-main px-4 py-3">Categoria</th>
                             <th class="px-4 py-3">Tipo</th>
-                            <th class="px-4 py-3">Monto</th>
-                            <th class="px-4 py-3">Ciclo</th>
-                            <th class="px-4 py-3">Renovacion</th>
+                            <th class="mobile-col-100 px-4 py-3">Monto</th>
+                            <th class="mobile-col-100 px-4 py-3">Ciclo</th>
+                            <th class="mobile-col-120 px-4 py-3">Renovacion</th>
                             <th class="px-4 py-3">Estado</th>
                             <th class="px-4 py-3 text-right">Acciones</th>
                         </tr>
@@ -113,12 +118,12 @@
                                 <td class="px-2 py-3 align-top">
                                     <span class="mx-auto block h-12 w-1.5 rounded-full {{ $statusBarClass }}"></span>
                                 </td>
-                                <td class="px-4 py-3 font-medium text-slate-900">{{ $costItem->name }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $costItem->categoryLabel() }}</td>
+                                <td class="mobile-col-main px-4 py-3 font-medium text-slate-900"><span class="mobile-clamp-2">{{ $costItem->name }}</span></td>
+                                <td class="mobile-col-main px-4 py-3 text-slate-700"><span class="mobile-clamp-2">{{ $costItem->categoryLabel() }}</span></td>
                                 <td class="px-4 py-3 text-slate-700">{{ ucfirst($costItem->cost_type) }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ number_format((float) $costItem->amount, 2) }} {{ $costItem->currency }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $costItem->billingFrequencyLabel() }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $costItem->next_renewal_at?->format('Y-m-d') ?: '-' }}</td>
+                                <td class="mobile-col-100 mobile-nowrap px-4 py-3 text-slate-700">{{ number_format((float) $costItem->amount, 2) }} {{ $costItem->currency }}</td>
+                                <td class="mobile-col-100 mobile-nowrap px-4 py-3 text-slate-700">{{ $costItem->billingFrequencyLabel() }}</td>
+                                <td class="mobile-col-120 mobile-nowrap px-4 py-3 text-slate-700">{{ $costItem->next_renewal_at?->format('Y-m-d') ?: '-' }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $costItem->is_active ? 'Activo' : 'Inactivo' }}</td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-end gap-2">

@@ -4,8 +4,13 @@
     </x-slot>
 
     <div class="space-y-6">
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
-            <form method="GET" action="{{ route('pagos.index') }}" class="space-y-3">
+        <div class="mobile-filters-shell rounded-xl border border-slate-200 bg-white p-4" x-data="{ mobileFiltersOpen: false }">
+            <button type="button" class="mobile-filters-toggle ui-btn mb-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50" @click="mobileFiltersOpen = !mobileFiltersOpen" :aria-expanded="mobileFiltersOpen.toString()">
+                <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
+                <span x-text="mobileFiltersOpen ? 'Ocultar filtros' : 'Mostrar filtros'"></span>
+            </button>
+
+            <form method="GET" action="{{ route('pagos.index') }}" class="space-y-3" x-show="mobileFiltersOpen" x-transition.opacity.duration.150ms x-cloak>
                 <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                     <div class="w-full lg:max-w-xl">
                         <input
@@ -91,17 +96,17 @@
 
         <div class="overflow-hidden rounded-xl border border-slate-200 bg-white">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <table class="mobile-table-compact min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                         <tr>
                             <th class="w-8 px-2 py-3"></th>
                             <th class="px-4 py-3">Estado</th>
-                            <th class="px-4 py-3">Fecha</th>
-                            <th class="px-4 py-3">Servicio</th>
-                            <th class="px-4 py-3">Suscripcion</th>
-                            <th class="px-4 py-3">Monto</th>
-                            <th class="px-4 py-3">Metodo</th>
-                            <th class="px-4 py-3">Referencia</th>
+                            <th class="mobile-col-120 px-4 py-3">Fecha</th>
+                            <th class="mobile-col-main px-4 py-3">Servicio</th>
+                            <th class="mobile-col-main px-4 py-3">Suscripcion</th>
+                            <th class="mobile-col-100 px-4 py-3">Monto</th>
+                            <th class="mobile-col-100 px-4 py-3">Metodo</th>
+                            <th class="mobile-col-main px-4 py-3">Referencia</th>
                             <th class="px-4 py-3 text-right">Acciones</th>
                         </tr>
                     </thead>
@@ -125,12 +130,12 @@
                                         <p class="mt-1 text-xs text-slate-500">Pago aplicado</p>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-slate-700">{{ $payment->paid_at?->format('Y-m-d') }}</td>
-                                <td class="px-4 py-3 font-medium text-slate-900">{{ $payment->service?->name }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $payment->subscription?->name ?: '-' }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ number_format((float) $payment->amount, 2) }} {{ $payment->currency }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $payment->isPending() ? 'Por confirmar' : $payment->methodLabel() }}</td>
-                                <td class="px-4 py-3 text-slate-700">{{ $payment->reference ?: '-' }}</td>
+                                <td class="mobile-col-120 mobile-nowrap px-4 py-3 text-slate-700">{{ $payment->paid_at?->format('Y-m-d') }}</td>
+                                <td class="mobile-col-main px-4 py-3 font-medium text-slate-900"><span class="mobile-clamp-2">{{ $payment->service?->name }}</span></td>
+                                <td class="mobile-col-main px-4 py-3 text-slate-700"><span class="mobile-clamp-2">{{ $payment->subscription?->name ?: '-' }}</span></td>
+                                <td class="mobile-col-100 mobile-nowrap px-4 py-3 text-slate-700">{{ number_format((float) $payment->amount, 2) }} {{ $payment->currency }}</td>
+                                <td class="mobile-col-100 mobile-nowrap px-4 py-3 text-slate-700">{{ $payment->isPending() ? 'Por confirmar' : $payment->methodLabel() }}</td>
+                                <td class="mobile-col-main px-4 py-3 text-slate-700"><span class="mobile-clamp-2">{{ $payment->reference ?: '-' }}</span></td>
                                 <td class="px-4 py-3">
                                     <div class="flex justify-end gap-2">
                                         <a href="{{ route('comprobantes.pagos.show', $payment) }}" class="ui-btn rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50">{{ $payment->isPending() ? 'Orden' : 'Comprobante' }}</a>

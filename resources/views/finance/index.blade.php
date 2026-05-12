@@ -211,7 +211,7 @@
                     </div>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <table class="mobile-table-compact min-w-full divide-y divide-slate-200 text-sm">
                         <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th class="w-8 px-2 py-3"></th>
@@ -235,8 +235,8 @@
                                         <span class="mx-auto block h-12 w-1.5 rounded-full {{ $statusBarClass }}"></span>
                                     </td>
                                     <td class="px-4 py-3">
-                                        <p class="font-medium text-slate-900">{{ $row['name'] }}</p>
-                                        <p class="mt-0.5 text-xs text-slate-500">{{ $row['provider'] !== '-' ? $row['provider'] : 'Sin proveedor' }}</p>
+                                        <p class="mobile-clamp-2 font-medium text-slate-900">{{ $row['name'] }}</p>
+                                        <p class="mobile-clamp-2 mt-0.5 text-xs text-slate-500">{{ $row['provider'] !== '-' ? $row['provider'] : 'Sin proveedor' }}</p>
                                     </td>
                                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
                                         {{ number_format((float) $row['income_real'], 2) }}
@@ -267,7 +267,7 @@
                     <h3 class="text-sm font-semibold text-slate-900">Costos proyectados por categoria</h3>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <table class="mobile-table-compact min-w-full divide-y divide-slate-200 text-sm">
                         <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th class="px-4 py-3">Categoria</th>
@@ -277,7 +277,7 @@
                         <tbody class="divide-y divide-slate-100">
                             @forelse($costByCategory as $row)
                                 <tr>
-                                    <td class="px-4 py-3 font-medium text-slate-900">{{ \App\Models\CostItem::categoryLabelFromValue($row->category) }}</td>
+                                    <td class="px-4 py-3 font-medium text-slate-900"><span class="mobile-clamp-2">{{ \App\Models\CostItem::categoryLabelFromValue($row->category) }}</span></td>
                                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
                                         {{ number_format((float) $row->amount_total, 2) }}
                                         <span class="hidden sm:inline">USD</span>
@@ -299,7 +299,7 @@
                     <h3 class="text-sm font-semibold text-slate-900">Snapshot por servicio ({{ $period }})</h3>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <table class="mobile-table-compact min-w-full divide-y divide-slate-200 text-sm">
                         <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th class="px-4 py-3">Servicio</th>
@@ -311,7 +311,7 @@
                         <tbody class="divide-y divide-slate-100">
                             @forelse($currentSnapshots as $row)
                                 <tr>
-                                    <td class="px-4 py-3 font-medium text-slate-900">{{ $row->service?->name ?? 'Servicio #'.$row->service_id }}</td>
+                                    <td class="px-4 py-3 font-medium text-slate-900"><span class="mobile-clamp-2">{{ $row->service?->name ?? 'Servicio #'.$row->service_id }}</span></td>
                                     <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">
                                         {{ number_format((float) $row->income_total, 2) }}
                                         <span class="hidden sm:inline">USD</span>
@@ -341,7 +341,7 @@
                     <h3 class="text-sm font-semibold text-slate-900">Historico de margen neto</h3>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                    <table class="mobile-table-compact min-w-full divide-y divide-slate-200 text-sm">
                         <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th class="px-4 py-3">Periodo</th>

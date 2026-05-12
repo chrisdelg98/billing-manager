@@ -127,27 +127,88 @@
         @include('layouts.partials.design-tokens')
     </head>
         <body class="font-sans antialiased bg-slate-100 text-slate-900"
-            x-data="{ sidebarExpanded: JSON.parse(localStorage.getItem('sidebar-expanded') ?? 'true'), mobileSidebarOpen: false, sectionHelpOpen: false }"
-          x-init="$watch('sidebarExpanded', value => localStorage.setItem('sidebar-expanded', JSON.stringify(value)))">
-        <div class="min-h-screen md:flex">
-            <div x-cloak x-show="mobileSidebarOpen" class="fixed inset-0 z-30 bg-slate-900/40 md:hidden" @click="mobileSidebarOpen = false"></div>
+            x-data="{
+                sidebarExpanded: JSON.parse(localStorage.getItem('sidebar-expanded') ?? 'true'),
+                mobileSidebarOpen: false,
+                sectionHelpOpen: false,
+                touchStartX: null,
+                touchStartY: null,
+                isTouchSidebarViewport() {
+                    return window.innerWidth < 1024;
+                },
+                openMobileSidebar() {
+                    this.mobileSidebarOpen = true;
+                },
+                closeMobileSidebar() {
+                    this.mobileSidebarOpen = false;
+                },
+                handleTouchStart(event) {
+                    if (!this.isTouchSidebarViewport()) {
+                        return;
+                    }
+
+                    const touch = event.changedTouches?.[0];
+                    if (!touch) {
+                        return;
+                    }
+
+                    this.touchStartX = touch.clientX;
+                    this.touchStartY = touch.clientY;
+                },
+                handleTouchEnd(event) {
+                    if (!this.isTouchSidebarViewport() || this.touchStartX === null || this.touchStartY === null) {
+                        return;
+                    }
+
+                    const touch = event.changedTouches?.[0];
+                    if (!touch) {
+                        this.touchStartX = null;
+                        this.touchStartY = null;
+                        return;
+                    }
+
+                    const deltaX = touch.clientX - this.touchStartX;
+                    const deltaY = Math.abs(touch.clientY - this.touchStartY);
+
+                    this.touchStartX = null;
+                    this.touchStartY = null;
+
+                    if (deltaY > 80) {
+                        return;
+                    }
+
+                    if (!this.mobileSidebarOpen && deltaX > 90) {
+                        this.openMobileSidebar();
+                        return;
+                    }
+
+                    if (this.mobileSidebarOpen && deltaX < -90) {
+                        this.closeMobileSidebar();
+                    }
+                },
+            }"
+            x-init="$watch('sidebarExpanded', value => localStorage.setItem('sidebar-expanded', JSON.stringify(value)))"
+            @touchstart.window.passive="handleTouchStart($event)"
+            @touchend.window.passive="handleTouchEnd($event)">
+        <div class="min-h-screen lg:flex">
+            <div x-cloak x-show="mobileSidebarOpen" class="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" @click="closeMobileSidebar()"></div>
 
             <aside
-                class="fixed inset-y-0 left-0 z-40 w-72 transform border-r border-slate-200 bg-white transition-all duration-200 ease-out md:static md:translate-x-0"
+                class="fixed inset-y-0 left-0 z-40 w-72 transform border-r border-slate-200 bg-white transition-all duration-200 ease-out lg:static lg:translate-x-0"
                 :class="[
-                    mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-                    sidebarExpanded ? 'md:w-72' : 'md:w-20'
+                    mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+                    sidebarExpanded ? 'lg:w-72' : 'lg:w-20'
                 ]"
             >
                 @include('layouts.navigation')
             </aside>
 
             <div class="flex min-w-0 flex-1 flex-col">
-                <div class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+                <div class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
                     <button
                         type="button"
                         class="inline-flex items-center justify-center rounded-lg border border-slate-300 p-2 text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200"
-                        @click="mobileSidebarOpen = true"
+                        @click="openMobileSidebar()"
                         aria-label="Abrir menu"
                     >
                         <x-heroicon-o-bars-3 class="h-5 w-5" />
@@ -160,7 +221,7 @@
                         <div class="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
                             <button
                                 type="button"
-                                class="hidden items-center justify-center rounded-lg border border-slate-300 p-2 text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200 md:inline-flex"
+                                class="hidden items-center justify-center rounded-lg border border-slate-300 p-2 text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200 lg:inline-flex"
                                 :aria-label="sidebarExpanded ? 'Colapsar menu' : 'Expandir menu'"
                                 @click="sidebarExpanded = !sidebarExpanded"
                             >
