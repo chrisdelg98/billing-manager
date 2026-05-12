@@ -3,6 +3,7 @@
 use App\Http\Controllers\CostItemController;
 use App\Http\Controllers\CostAllocationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmailTestController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentVoucherController;
@@ -32,6 +33,12 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/herramientas/migraciones/baseline', [MigrationToolController::class, 'baseline'])
         ->name('herramientas.migraciones.baseline');
+
+    Route::get('/herramientas/correos-prueba', [EmailTestController::class, 'index'])
+        ->name('herramientas.correos-prueba.index');
+
+    Route::post('/herramientas/correos-prueba', [EmailTestController::class, 'send'])
+        ->name('herramientas.correos-prueba.send');
 
     Route::resource('servicios', ServiceController::class)
         ->parameters(['servicios' => 'service'])

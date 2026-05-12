@@ -49,7 +49,7 @@ class PaymentVoucherController extends Controller
 
         $payment->loadMissing([
             'service:id,name',
-            'subscription:id,name',
+            'subscription:id,name,billing_cycle,next_renewal_at',
         ]);
 
         $isPending = $payment->isPending();
@@ -95,7 +95,7 @@ class PaymentVoucherController extends Controller
 
         $successMessage = $isPending
             ? 'Orden de pago enviada por correo con el voucher adjunto.'
-            : 'Comprobante enviado por correo con el voucher adjunto.';
+            : 'Comprobante de pago enviado por correo con el voucher adjunto.';
 
         return redirect()
             ->route('comprobantes.pagos.show', $payment)
@@ -142,12 +142,10 @@ class PaymentVoucherController extends Controller
             $recipientName = (string) ($subscription->billing_contact_name ?? '');
         }
 
-        $pdfOutput = $this->buildReminderVoucherPdf($subscription, $voucherNumber, $daysUntilRenewal, $lastPaymentDate);
-        $pdfFileName = "recordatorio-{$voucherNumber}.pdf";
         $subject = "Recordatorio de pago {$voucherNumber}";
 
         try {
-            Mail::send([], [], function ($message) use ($recipientEmail, $recipientName, $subject, $subscription, $voucherNumber, $daysUntilRenewal, $lastPaymentDate, $pdfOutput, $pdfFileName): void {
+            Mail::send([], [], function ($message) use ($recipientEmail, $recipientName, $subject, $subscription, $voucherNumber, $daysUntilRenewal, $lastPaymentDate): void {
                 if ($recipientName !== '') {
                     $message->to($recipientEmail, $recipientName);
                 } else {
@@ -162,7 +160,6 @@ class PaymentVoucherController extends Controller
                     'lastPaymentDate',
                     'recipientName'
                 ))->render());
-                $message->attachData($pdfOutput, $pdfFileName, ['mime' => 'application/pdf']);
             });
         } catch (Throwable $exception) {
             report($exception);
@@ -174,7 +171,7 @@ class PaymentVoucherController extends Controller
 
         return redirect()
             ->route('comprobantes.suscripciones.recordatorio', $subscription)
-            ->with('status', 'Recordatorio enviado por correo con el voucher adjunto.');
+            ->with('status', 'Recordatorio enviado por correo.');
     }
 
     private function buildReminderVoucherPdf(Subscription $subscription, string $voucherNumber, ?int $daysUntilRenewal, $lastPaymentDate): string
@@ -234,13 +231,7 @@ class PaymentVoucherController extends Controller
      */
     private function paymentPaperSize(Payment $payment): array
     {
-        $width = 595.28;
-        $baseHeight = 420.0;
-        $notesLength = mb_strlen(trim((string) ($payment->notes ?? '')));
-        $notesLines = $notesLength > 0 ? (int) ceil($notesLength / 95) : 0;
-        $height = $baseHeight + max(0, $notesLines - 2) * 12;
-
-        return [0, 0, $width, min(max($height, 420.0), 900.0)];
+        return $this->voucherPaperSize();
     }
 
     /**
@@ -248,7 +239,15 @@ class PaymentVoucherController extends Controller
      */
     private function reminderPaperSize(): array
     {
-        return [0, 0, 595.28, 520.0];
+        return $this->voucherPaperSize();
+    }
+
+    /**
+     * @return array{0:int,1:int,2:float,3:float}
+     */
+    private function voucherPaperSize(): array
+    {
+        return [0, 0, 595.28, 540.0];
     }
 
 }

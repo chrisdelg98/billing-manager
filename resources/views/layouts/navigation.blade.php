@@ -117,6 +117,16 @@
 
             @if (Auth::user()?->role === 'admin')
                 <a
+                    href="{{ route('herramientas.correos-prueba.index') }}"
+                    title="Pruebas de correo"
+                    class="ui-btn flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition {{ request()->routeIs('herramientas.correos-prueba.*') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' }}"
+                    :class="sidebarExpanded || mobileSidebarOpen ? 'justify-start' : 'justify-center'"
+                >
+                    <x-heroicon-o-envelope class="h-5 w-5 shrink-0" />
+                    <span x-show="sidebarExpanded || mobileSidebarOpen" x-transition.opacity>Pruebas de correo</span>
+                </a>
+
+                <a
                     href="{{ route('herramientas.migraciones.index') }}"
                     title="Migraciones"
                     class="ui-btn flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition {{ request()->routeIs('herramientas.migraciones.*') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100' }}"

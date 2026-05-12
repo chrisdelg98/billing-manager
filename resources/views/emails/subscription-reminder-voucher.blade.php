@@ -24,7 +24,7 @@
                                 Hola{{ !empty($recipientName) ? ', '.$recipientName : '' }}
                             </p>
                             <p style="margin:0 0 18px; font-family:Arial, sans-serif; font-size:15px; line-height:24px; color:#334155;">
-                                Este mensaje es un recordatorio de pago para la suscripcion <strong style="color:#0f172a;">{{ $subscription->name }}</strong>. Adjuntamos el voucher en PDF para tu control.
+                                Este mensaje es un recordatorio de pago para la suscripcion <strong style="color:#0f172a;">{{ $subscription->name }}</strong>.
                             </p>
 
                             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #e2e8f0; border-radius:8px; background:#ffffff;">
@@ -34,6 +34,16 @@
                                         <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ $subscription->service?->name ?: '-' }}</p>
                                     </td>
                                     <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0; width:50%;">
+                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Suscripcion</p>
+                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ $subscription->name }}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0;">
+                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Ciclo</p>
+                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ ucfirst((string) ($subscription->billing_cycle ?? '-')) }}</p>
+                                    </td>
+                                    <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0;">
                                         <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Monto</p>
                                         <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ number_format((float) $subscription->amount, 2) }} {{ $subscription->currency }}</p>
                                     </td>

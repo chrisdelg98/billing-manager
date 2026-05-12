@@ -65,7 +65,7 @@ class PaymentVouchersTest extends TestCase
                 'recipient_email' => 'patricia@example.com',
             ])
             ->assertRedirect(route('comprobantes.pagos.show', $payment))
-            ->assertSessionHas('status', 'Comprobante enviado por correo con el voucher adjunto.');
+            ->assertSessionHas('status', 'Comprobante de pago enviado por correo con el voucher adjunto.');
     }
 
     public function test_authenticated_user_can_open_subscription_reminder_voucher(): void
@@ -112,7 +112,7 @@ class PaymentVouchersTest extends TestCase
                 'recipient_email' => 'krissia@example.com',
             ])
             ->assertRedirect(route('comprobantes.suscripciones.recordatorio', $subscription))
-            ->assertSessionHas('status', 'Recordatorio enviado por correo con el voucher adjunto.');
+            ->assertSessionHas('status', 'Recordatorio enviado por correo.');
     }
 
     public function test_authenticated_user_can_open_pending_payment_order_voucher(): void

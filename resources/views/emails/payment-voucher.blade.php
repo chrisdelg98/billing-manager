@@ -25,34 +25,66 @@
                             <p style="margin:0 0 12px; font-family:Arial, sans-serif; font-size:16px; line-height:24px; color:#0f172a; font-weight:700;">
                                 Hola{{ !empty($recipientName) ? ', '.$recipientName : (!empty($payment->recipient_name) ? ', '.$payment->recipient_name : '') }}
                             </p>
-                            <p style="margin:0 0 18px; font-family:Arial, sans-serif; font-size:15px; line-height:24px; color:#334155;">
-                                {{ $isPending ? 'Te compartimos tu orden de pago' : 'Te compartimos tu comprobante de pago' }}
-                                <strong style="color:#0f172a;">{{ $voucherNumber }}</strong>
-                                del servicio <strong style="color:#0f172a;">{{ $payment->service?->name ?: 'N/A' }}</strong>.
-                            </p>
+                            @if ($isPending)
+                                <p style="margin:0 0 18px; font-family:Arial, sans-serif; font-size:15px; line-height:24px; color:#334155;">
+                                    Te compartimos la <strong style="color:#0f172a;">orden de pago {{ $voucherNumber }}</strong> correspondiente a tu suscripcion <strong style="color:#0f172a;">{{ $payment->subscription?->name ?: 'N/A' }}</strong>. Aun se encuentra pendiente de pago.
+                                </p>
+                            @else
+                                <p style="margin:0 0 18px; font-family:Arial, sans-serif; font-size:15px; line-height:24px; color:#334155;">
+                                    Confirmamos que tu pago <strong style="color:#0f172a;">{{ $voucherNumber }}</strong> de la suscripcion <strong style="color:#0f172a;">{{ $payment->subscription?->name ?: 'N/A' }}</strong> se registro correctamente. No necesitas hacer nada mas.
+                                </p>
+                            @endif
 
                             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border:1px solid #e2e8f0; border-radius:8px; background:#ffffff;">
                                 <tr>
                                     <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0; width:50%;">
-                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Monto</p>
-                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ number_format((float) $payment->amount, 2) }} {{ $payment->currency }}</p>
+                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Servicio</p>
+                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ $payment->service?->name ?: '-' }}</p>
                                     </td>
                                     <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0; width:50%;">
-                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Fecha</p>
-                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ $payment->paid_at?->format('Y-m-d') ?: '-' }}</p>
+                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Suscripcion</p>
+                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ $payment->subscription?->name ?: '-' }}</p>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td style="padding:12px 14px;" colspan="2">
-                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Estado</p>
-                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ $isPending ? 'Pago pendiente' : 'Pago confirmado' }}</p>
+                                    <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0;">
+                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Ciclo</p>
+                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ ucfirst((string) ($payment->subscription?->billing_cycle ?? '-')) }}</p>
+                                    </td>
+                                    <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0;">
+                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Monto</p>
+                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ number_format((float) $payment->amount, 2) }} {{ $payment->currency }}</p>
                                     </td>
                                 </tr>
+                                <tr>
+                                    <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0;">
+                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Estado</p>
+                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:{{ $isPending ? '#9a3412' : '#166534' }}; font-weight:700;">{{ $isPending ? 'Pago pendiente' : 'Pagado' }}</p>
+                                    </td>
+                                    <td style="padding:12px 14px; border-bottom:1px solid #e2e8f0;">
+                                        <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Fecha de emision</p>
+                                        <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ $payment->paid_at?->format('Y-m-d') ?: now()->format('Y-m-d') }}</p>
+                                    </td>
+                                </tr>
+                                @if (! $isPending && $payment->subscription?->next_renewal_at)
+                                    <tr>
+                                        <td style="padding:12px 14px;" colspan="2">
+                                            <p style="margin:0; font-family:Arial, sans-serif; font-size:11px; line-height:16px; text-transform:uppercase; letter-spacing:.6px; color:#64748b;">Proxima fecha de renovacion</p>
+                                            <p style="margin:4px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:20px; color:#0f172a; font-weight:700;">{{ $payment->subscription->next_renewal_at->format('Y-m-d') }}</p>
+                                        </td>
+                                    </tr>
+                                @endif
                             </table>
 
-                            <p style="margin:18px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:22px; color:#334155;">
-                                Adjuntamos el voucher en PDF para tu control.
-                            </p>
+                            @if ($isPending)
+                                <p style="margin:18px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:22px; color:#334155;">
+                                    Adjuntamos la orden de pago en PDF. Para gestionar el pago, comunicate con <strong style="color:#0f172a;">Christian Arevalo</strong>.
+                                </p>
+                            @else
+                                <p style="margin:18px 0 0; font-family:Arial, sans-serif; font-size:14px; line-height:22px; color:#334155;">
+                                    Adjuntamos el comprobante en PDF para tu control. Gracias por mantener tu suscripcion al dia.
+                                </p>
+                            @endif
 
                             @include('emails.partials.automated-notice')
                         </td>

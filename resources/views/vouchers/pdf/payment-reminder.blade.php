@@ -124,7 +124,7 @@
                 </td>
             </tr>
             <tr>
-                <td>
+                <td colspan="2">
                     <div class="label">Estado</div>
                     <div class="value">
                         @if (is_null($daysUntilRenewal))
@@ -138,15 +138,11 @@
                         @endif
                     </div>
                 </td>
-                <td>
-                    <div class="label">Contacto de gestion</div>
-                    <div class="value">Christian Arevalo</div>
-                </td>
             </tr>
         </table>
 
         <div class="foot">
-            Este documento es un recordatorio de pago. No incluye enlaces de pago. Para gestionar el pago, comunicarse con Christian Arevalo.
+            Este documento es un recordatorio de pago. No incluye enlaces de pago.
         </div>
     </section>
 </body>

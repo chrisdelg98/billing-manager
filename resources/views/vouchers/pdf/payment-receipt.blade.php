@@ -84,11 +84,16 @@
         }
 
         .notes {
-            border-top: 1px solid #cbd5e1;
+            border-top: 1px solid #e2e8f0;
             padding: 10px 12px;
             color: #475569;
             white-space: pre-line;
             line-height: 1.5;
+            font-size: 11px;
+        }
+
+        .notes strong {
+            color: #0f172a;
         }
     </style>
 </head>
@@ -113,12 +118,22 @@
             </tr>
             <tr>
                 <td>
-                    <div class="label">{{ $isPending ? 'Fecha de orden' : 'Fecha de pago' }}</div>
-                    <div class="value">{{ $payment->paid_at?->format('Y-m-d') ?: '-' }}</div>
+                    <div class="label">Ciclo</div>
+                    <div class="value">{{ ucfirst((string) ($payment->subscription?->billing_cycle ?? '-')) }}</div>
                 </td>
                 <td>
                     <div class="label">Monto</div>
                     <div class="value">{{ number_format((float) $payment->amount, 2) }} {{ $payment->currency }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="label">Estado</div>
+                    <div class="value">{{ $isPending ? 'Pago pendiente' : 'Pagado' }}</div>
+                </td>
+                <td>
+                    <div class="label">Fecha de emision</div>
+                    <div class="value">{{ $payment->paid_at?->format('Y-m-d') ?: now()->format('Y-m-d') }}</div>
                 </td>
             </tr>
             <tr>
@@ -131,13 +146,18 @@
                     <div class="value">{{ $payment->reference ?: '-' }}</div>
                 </td>
             </tr>
+            @if (! $isPending && $payment->subscription?->next_renewal_at)
+                <tr>
+                    <td colspan="2">
+                        <div class="label">Proxima fecha de renovacion</div>
+                        <div class="value">{{ $payment->subscription->next_renewal_at->format('Y-m-d') }}</div>
+                    </td>
+                </tr>
+            @endif
         </table>
 
         @if (! empty($payment->notes))
-            <div class="notes">
-                <strong>Notas:</strong>
-                {{ $payment->notes }}
-            </div>
+            <div class="notes"><strong>Notas:</strong> {{ $payment->notes }}</div>
         @endif
     </section>
 </body>
