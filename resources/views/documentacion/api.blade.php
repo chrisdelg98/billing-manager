@@ -31,7 +31,7 @@
 
             <div class="rounded-xl border border-slate-200 bg-white p-5">
                 <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Ejemplo cURL</h3>
-                <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>curl -X GET "{{ url('/api/v1/license/status') }}" \
+                <pre class="mt-3 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100 text-wrap "><code>curl -X GET "{{ url('/api/v1/license/status') }}" \
   -H "Accept: application/json" \
   -H "X-License-Code: LIC-XXXXXXXXXXXX" \
   -H "X-License-Secret: TU_SECRETO"</code></pre>

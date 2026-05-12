@@ -125,17 +125,110 @@
                                 <td class="mobile-col-100 mobile-nowrap px-4 py-3 text-slate-700">{{ $costItem->billingFrequencyLabel() }}</td>
                                 <td class="mobile-col-120 mobile-nowrap px-4 py-3 text-slate-700">{{ $costItem->next_renewal_at?->format('Y-m-d') ?: '-' }}</td>
                                 <td class="px-4 py-3 text-slate-700">{{ $costItem->is_active ? 'Activo' : 'Inactivo' }}</td>
-                                <td class="px-4 py-3">
-                                    <div class="flex justify-end gap-2">
-                                        @if ($costItem->cost_type === 'shared')
-                                            <a href="{{ route('costos.asignaciones.edit', $costItem) }}" class="ui-btn rounded-lg border border-indigo-300 px-3 py-1.5 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50">Asignar</a>
-                                        @endif
-                                        <a href="{{ route('costos.edit', $costItem) }}" class="ui-btn rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">Editar</a>
-                                        <form method="POST" action="{{ route('costos.destroy', $costItem) }}" onsubmit="return confirm('Se eliminara el costo. Continuar?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="ui-btn rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50">Eliminar</button>
-                                        </form>
+                                <td class="px-4 py-3 text-right">
+                                    <div
+                                        class="inline-flex"
+                                        x-data="{
+                                            open: false,
+                                            menuStyle: '',
+                                            toggleMenu() {
+                                                if (this.open) {
+                                                    this.closeMenu();
+                                                    return;
+                                                }
+
+                                                this.open = true;
+                                                this.$nextTick(() => this.positionMenu());
+                                            },
+                                            closeMenu() {
+                                                this.open = false;
+                                            },
+                                            positionMenu() {
+                                                const trigger = this.$refs.trigger;
+
+                                                if (!trigger) {
+                                                    return;
+                                                }
+
+                                                const rect = trigger.getBoundingClientRect();
+                                                const menuWidth = 176;
+                                                const menuHeight = 190;
+                                                const viewportPadding = 8;
+                                                const gap = 8;
+
+                                                let left = rect.right - menuWidth;
+                                                left = Math.max(viewportPadding, Math.min(left, window.innerWidth - menuWidth - viewportPadding));
+
+                                                let top = rect.bottom + gap;
+                                                const canOpenUp = (rect.top - gap - menuHeight) > viewportPadding;
+                                                const overflowsBottom = (top + menuHeight) > (window.innerHeight - viewportPadding);
+
+                                                if (overflowsBottom && canOpenUp) {
+                                                    top = rect.top - gap - menuHeight;
+                                                }
+
+                                                top = Math.max(viewportPadding, top);
+                                                this.menuStyle = `left:${left}px; top:${top}px; width:${menuWidth}px;`;
+                                            },
+                                        }"
+                                        @resize.window="if (open) { positionMenu() }"
+                                        @scroll.window="if (open) { positionMenu() }"
+                                    >
+                                        <button
+                                            type="button"
+                                            x-ref="trigger"
+                                            class="ui-btn inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                            @click="toggleMenu()"
+                                            @keydown.escape.window="closeMenu()"
+                                            :aria-expanded="open.toString()"
+                                            aria-haspopup="true"
+                                        >
+                                            Acciones
+                                            <x-heroicon-o-chevron-down class="h-3.5 w-3.5" />
+                                        </button>
+
+                                        <template x-teleport="body">
+                                            <div
+                                                x-cloak
+                                                x-show="open"
+                                                x-transition.opacity.duration.120ms
+                                                class="fixed inset-0 z-[85]"
+                                                @click="closeMenu()"
+                                                @keydown.escape.window="closeMenu()"
+                                            >
+                                                <div
+                                                    class="absolute rounded-xl border border-slate-200 bg-white p-2 shadow-lg"
+                                                    :style="menuStyle"
+                                                    @click.stop
+                                                >
+                                                    <div class="space-y-1 text-left">
+                                                        @if ($costItem->cost_type === 'shared')
+                                                            <a
+                                                                href="{{ route('costos.asignaciones.edit', $costItem) }}"
+                                                                class="block rounded-lg border border-indigo-300 px-3 py-2 text-xs font-medium text-indigo-700 transition hover:bg-indigo-50"
+                                                                @click="closeMenu()"
+                                                            >
+                                                                Asignar
+                                                            </a>
+                                                        @endif
+
+                                                        <a
+                                                            href="{{ route('costos.edit', $costItem) }}"
+                                                            class="block rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                                                            @click="closeMenu()"
+                                                        >
+                                                            Editar
+                                                        </a>
+
+                                                        <form method="POST" action="{{ route('costos.destroy', $costItem) }}" onsubmit="return confirm('Se eliminara el costo. Continuar?')">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="block w-full rounded-lg border border-red-300 px-3 py-2 text-left text-xs font-medium text-red-700 transition hover:bg-red-50" @click="closeMenu()">Eliminar</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
                                     </div>
                                 </td>
                             </tr>
