@@ -119,6 +119,12 @@
                     <div class="value">{{ $subscription->next_renewal_at?->format('Y-m-d') ?: '-' }}</div>
                 </td>
                 <td>
+                    <div class="label">Ultimo dia de pago</div>
+                    <div class="value">{{ $lastPaymentDate?->format('Y-m-d') ?: '-' }}</div>
+                </td>
+            </tr>
+            <tr>
+                <td>
                     <div class="label">Estado</div>
                     <div class="value">
                         @if (is_null($daysUntilRenewal))
@@ -132,11 +138,15 @@
                         @endif
                     </div>
                 </td>
+                <td>
+                    <div class="label">Contacto de gestion</div>
+                    <div class="value">Christian Arevalo</div>
+                </td>
             </tr>
         </table>
 
         <div class="foot">
-            Este documento es un recordatorio de pago. Cuando el pago sea confirmado, se emitira el comprobante final.
+            Este documento es un recordatorio de pago. No incluye enlaces de pago. Para gestionar el pago, comunicarse con Christian Arevalo.
         </div>
     </section>
 </body>

@@ -6,9 +6,12 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use App\Models\Payment;
 use App\Models\Subscription;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\View\View;
+use Throwable;
 
 class PaymentVoucherController extends Controller
 {
@@ -37,15 +40,78 @@ class PaymentVoucherController extends Controller
         return view('vouchers.payment-receipt', compact('payment', 'voucherNumber', 'isPending'));
     }
 
+    public function sendPaymentEmail(Request $request, Payment $payment): RedirectResponse
+    {
+        $data = $request->validate([
+            'recipient_name' => ['nullable', 'string', 'max:120'],
+            'recipient_email' => ['required', 'email', 'max:190'],
+        ]);
+
+        $payment->loadMissing([
+            'service:id,name',
+            'subscription:id,name',
+        ]);
+
+        $isPending = $payment->isPending();
+        $voucherNumber = sprintf($isPending ? 'ORD-%06d' : 'PAGO-%06d', (int) $payment->id);
+        $filePrefix = $isPending ? 'orden-pago' : 'comprobante';
+        $pdfFileName = "{$filePrefix}-{$voucherNumber}.pdf";
+
+        $recipientEmail = (string) $data['recipient_email'];
+        $recipientName = trim((string) ($data['recipient_name'] ?? ''));
+        if ($recipientName === '') {
+            $recipientName = (string) ($payment->recipient_name ?? '');
+        }
+
+        $pdfOutput = $this->buildPaymentVoucherPdf($payment, $voucherNumber, $isPending);
+        $subject = $isPending
+            ? "Orden de pago {$voucherNumber}"
+            : "Comprobante de pago {$voucherNumber}";
+
+        try {
+            Mail::send([], [], function ($message) use ($recipientEmail, $recipientName, $subject, $payment, $voucherNumber, $isPending, $pdfOutput, $pdfFileName): void {
+                if ($recipientName !== '') {
+                    $message->to($recipientEmail, $recipientName);
+                } else {
+                    $message->to($recipientEmail);
+                }
+
+                $message->subject($subject);
+                $message->html(view('emails.payment-voucher', compact(
+                    'payment',
+                    'voucherNumber',
+                    'isPending',
+                    'recipientName'
+                ))->render());
+                $message->attachData($pdfOutput, $pdfFileName, ['mime' => 'application/pdf']);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('comprobantes.pagos.show', $payment)
+                ->with('status', 'No se pudo enviar el correo; revisa la configuracion SMTP.');
+        }
+
+        $successMessage = $isPending
+            ? 'Orden de pago enviada por correo con el voucher adjunto.'
+            : 'Comprobante enviado por correo con el voucher adjunto.';
+
+        return redirect()
+            ->route('comprobantes.pagos.show', $payment)
+            ->with('status', $successMessage);
+    }
+
     public function reminder(Request $request, Subscription $subscription): View|Response
     {
         $subscription->loadMissing('service:id,name');
 
         $voucherNumber = sprintf('RMD-%06d', (int) $subscription->id);
         $daysUntilRenewal = $subscription->daysUntilRenewal();
+        $lastPaymentDate = $subscription->next_renewal_at?->copy()->endOfMonth();
 
         if ($request->string('format')->toString() === 'pdf') {
-            $html = view('vouchers.pdf.payment-reminder', compact('subscription', 'voucherNumber', 'daysUntilRenewal'))->render();
+            $html = view('vouchers.pdf.payment-reminder', compact('subscription', 'voucherNumber', 'daysUntilRenewal', 'lastPaymentDate'))->render();
 
             return $this->renderPdf(
                 $html,
@@ -54,7 +120,93 @@ class PaymentVoucherController extends Controller
             );
         }
 
-        return view('vouchers.payment-reminder', compact('subscription', 'voucherNumber', 'daysUntilRenewal'));
+        return view('vouchers.payment-reminder', compact('subscription', 'voucherNumber', 'daysUntilRenewal', 'lastPaymentDate'));
+    }
+
+    public function sendReminderEmail(Request $request, Subscription $subscription): RedirectResponse
+    {
+        $data = $request->validate([
+            'recipient_name' => ['nullable', 'string', 'max:120'],
+            'recipient_email' => ['required', 'email', 'max:190'],
+        ]);
+
+        $subscription->loadMissing('service:id,name');
+
+        $voucherNumber = sprintf('RMD-%06d', (int) $subscription->id);
+        $daysUntilRenewal = $subscription->daysUntilRenewal();
+        $lastPaymentDate = $subscription->next_renewal_at?->copy()->endOfMonth();
+
+        $recipientEmail = (string) $data['recipient_email'];
+        $recipientName = trim((string) ($data['recipient_name'] ?? ''));
+        if ($recipientName === '') {
+            $recipientName = (string) ($subscription->billing_contact_name ?? '');
+        }
+
+        $pdfOutput = $this->buildReminderVoucherPdf($subscription, $voucherNumber, $daysUntilRenewal, $lastPaymentDate);
+        $pdfFileName = "recordatorio-{$voucherNumber}.pdf";
+        $subject = "Recordatorio de pago {$voucherNumber}";
+
+        try {
+            Mail::send([], [], function ($message) use ($recipientEmail, $recipientName, $subject, $subscription, $voucherNumber, $daysUntilRenewal, $lastPaymentDate, $pdfOutput, $pdfFileName): void {
+                if ($recipientName !== '') {
+                    $message->to($recipientEmail, $recipientName);
+                } else {
+                    $message->to($recipientEmail);
+                }
+
+                $message->subject($subject);
+                $message->html(view('emails.subscription-reminder-voucher', compact(
+                    'subscription',
+                    'voucherNumber',
+                    'daysUntilRenewal',
+                    'lastPaymentDate',
+                    'recipientName'
+                ))->render());
+                $message->attachData($pdfOutput, $pdfFileName, ['mime' => 'application/pdf']);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('comprobantes.suscripciones.recordatorio', $subscription)
+                ->with('status', 'No se pudo enviar el correo; revisa la configuracion SMTP.');
+        }
+
+        return redirect()
+            ->route('comprobantes.suscripciones.recordatorio', $subscription)
+            ->with('status', 'Recordatorio enviado por correo con el voucher adjunto.');
+    }
+
+    private function buildReminderVoucherPdf(Subscription $subscription, string $voucherNumber, ?int $daysUntilRenewal, $lastPaymentDate): string
+    {
+        $html = view('vouchers.pdf.payment-reminder', compact('subscription', 'voucherNumber', 'daysUntilRenewal', 'lastPaymentDate'))->render();
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->setPaper($this->reminderPaperSize());
+        $pdf->render();
+
+        return $pdf->output();
+    }
+
+    private function buildPaymentVoucherPdf(Payment $payment, string $voucherNumber, bool $isPending): string
+    {
+        $html = view('vouchers.pdf.payment-receipt', compact('payment', 'voucherNumber', 'isPending'))->render();
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->setPaper($this->paymentPaperSize($payment));
+        $pdf->render();
+
+        return $pdf->output();
     }
 
     /**
@@ -96,6 +248,7 @@ class PaymentVoucherController extends Controller
      */
     private function reminderPaperSize(): array
     {
-        return [0, 0, 595.28, 470.0];
+        return [0, 0, 595.28, 520.0];
     }
+
 }

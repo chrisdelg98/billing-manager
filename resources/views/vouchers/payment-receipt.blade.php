@@ -158,6 +158,58 @@
 </head>
 <body>
     <div class="wrap">
+        @if (session('status'))
+            <div style="margin-bottom: 12px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; padding: 10px 12px; border-radius: 8px; font-size: 13px;">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div style="margin-bottom: 12px; border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b; padding: 10px 12px; border-radius: 8px; font-size: 13px;">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
+        <section class="card" style="margin-bottom: 12px;">
+            <header class="header" style="padding-bottom: 14px;">
+                <div>
+                    <h2 class="title" style="font-size: 18px;">Enviar {{ $isPending ? 'orden de pago' : 'comprobante' }} por correo</h2>
+                    <div class="meta">Se adjuntara automaticamente el voucher en PDF.</div>
+                </div>
+            </header>
+            <form method="POST" action="{{ route('comprobantes.pagos.send', $payment) }}" style="padding: 0 22px 22px;">
+                @csrf
+                <div class="grid" style="padding: 0;">
+                    <div class="item">
+                        <div class="label">Nombre destinatario (opcional)</div>
+                        <input
+                            type="text"
+                            name="recipient_name"
+                            value="{{ old('recipient_name', $payment->recipient_name) }}"
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-size: 14px;"
+                            placeholder="Nombre del contacto"
+                        >
+                    </div>
+
+                    <div class="item">
+                        <div class="label">Correo destinatario</div>
+                        <input
+                            type="email"
+                            name="recipient_email"
+                            value="{{ old('recipient_email', $payment->recipient_email) }}"
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-size: 14px;"
+                            placeholder="correo@empresa.com"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+                    <button type="submit" class="btn btn-primary">Enviar por correo</button>
+                </div>
+            </form>
+        </section>
+
         <div class="toolbar">
             <a href="{{ route('pagos.index') }}" class="btn">Volver a pagos</a>
             <div style="display: flex; gap: 8px;">
@@ -166,16 +218,10 @@
             </div>
         </div>
 
-        @if (session('status'))
-            <div style="margin-bottom: 12px; border: 1px solid #86efac; background: #f0fdf4; color: #166534; padding: 10px 12px; border-radius: 8px; font-size: 13px;">
-                {{ session('status') }}
-            </div>
-        @endif
-
         @if (session('whatsapp_share_url'))
-            <div style="margin-bottom: 12px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div style="margin-bottom: 12px; border: 1px solid #86efac; background: #f0fdf4; color: #166534; padding: 10px 12px; border-radius: 8px; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap;">
                 <span>Mensaje de WhatsApp listo. Abre el chat y envia el PDF manualmente.</span>
-                <a href="{{ session('whatsapp_share_url') }}" target="_blank" rel="noopener noreferrer" class="btn" style="border-color: #93c5fd;">Abrir WhatsApp</a>
+                <a href="{{ session('whatsapp_share_url') }}" target="_blank" rel="noopener noreferrer" class="btn" style="border-color: #86efac;">Abrir WhatsApp</a>
             </div>
         @endif
 

@@ -78,8 +78,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/comprobantes/pagos/{payment}', [PaymentVoucherController::class, 'payment'])
         ->name('comprobantes.pagos.show');
 
+    Route::post('/comprobantes/pagos/{payment}/enviar', [PaymentVoucherController::class, 'sendPaymentEmail'])
+        ->name('comprobantes.pagos.send');
+
     Route::get('/comprobantes/suscripciones/{subscription}/recordatorio', [PaymentVoucherController::class, 'reminder'])
         ->name('comprobantes.suscripciones.recordatorio');
+
+    Route::post('/comprobantes/suscripciones/{subscription}/recordatorio/enviar', [PaymentVoucherController::class, 'sendReminderEmail'])
+        ->name('comprobantes.suscripciones.recordatorio.send');
 
     Route::resource('costos', CostItemController::class)
         ->parameters(['costos' => 'costItem'])

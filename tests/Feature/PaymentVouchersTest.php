@@ -50,13 +50,22 @@ class PaymentVouchersTest extends TestCase
             ->assertSee('Comprobante de pago')
             ->assertSee('PAGO-')
             ->assertSee('PAGO CONFIRMADO')
-            ->assertSee('CLINEXUS');
+            ->assertSee('CLINEXUS')
+            ->assertSee('Enviar comprobante por correo');
 
         $this->actingAs($user)
             ->get(route('comprobantes.pagos.show', ['payment' => $payment, 'format' => 'pdf']))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')
             ->assertHeader('Content-Disposition', 'attachment; filename="comprobante-'.sprintf('PAGO-%06d', (int) $payment->id).'.pdf"');
+
+        $this->actingAs($user)
+            ->post(route('comprobantes.pagos.send', $payment), [
+                'recipient_name' => 'Patricia Garcia',
+                'recipient_email' => 'patricia@example.com',
+            ])
+            ->assertRedirect(route('comprobantes.pagos.show', $payment))
+            ->assertSessionHas('status', 'Comprobante enviado por correo con el voucher adjunto.');
     }
 
     public function test_authenticated_user_can_open_subscription_reminder_voucher(): void
@@ -75,6 +84,8 @@ class PaymentVouchersTest extends TestCase
             'amount' => 300,
             'currency' => 'USD',
             'next_renewal_at' => now()->addDays(5)->toDateString(),
+            'billing_contact_name' => 'Krissia Castro',
+            'billing_contact_email' => 'krissia@example.com',
             'is_active' => true,
         ]);
 
@@ -85,13 +96,23 @@ class PaymentVouchersTest extends TestCase
             ->assertSee('PENDIENTE DE PAGO')
             ->assertSee('CLINEXUS CORE ANUAL')
             ->assertSee('300.00 USD')
-            ->assertSee('Este documento es un recordatorio de pago. Cuando el pago sea confirmado, se emitira el comprobante final.');
+            ->assertSee('Ultimo dia de pago')
+            ->assertSee('Enviar recordatorio por correo')
+            ->assertSee('Para gestionar el pago, comunicarte con Christian Arevalo.');
 
         $this->actingAs($user)
             ->get(route('comprobantes.suscripciones.recordatorio', ['subscription' => $subscription, 'format' => 'pdf']))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf')
             ->assertHeader('Content-Disposition', 'attachment; filename="recordatorio-'.sprintf('RMD-%06d', (int) $subscription->id).'.pdf"');
+
+        $this->actingAs($user)
+            ->post(route('comprobantes.suscripciones.recordatorio.send', $subscription), [
+                'recipient_name' => 'Krissia Castro',
+                'recipient_email' => 'krissia@example.com',
+            ])
+            ->assertRedirect(route('comprobantes.suscripciones.recordatorio', $subscription))
+            ->assertSessionHas('status', 'Recordatorio enviado por correo con el voucher adjunto.');
     }
 
     public function test_authenticated_user_can_open_pending_payment_order_voucher(): void
@@ -132,7 +153,8 @@ class PaymentVouchersTest extends TestCase
             ->assertSee('Orden de pago')
             ->assertSee('ORD-')
             ->assertSee('PAGO PENDIENTE')
-            ->assertSee('Por confirmar');
+            ->assertSee('Por confirmar')
+            ->assertSee('Enviar orden de pago por correo');
 
         $this->actingAs($user)
             ->get(route('comprobantes.pagos.show', ['payment' => $payment, 'format' => 'pdf']))

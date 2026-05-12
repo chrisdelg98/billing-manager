@@ -12,7 +12,7 @@
             --line: #cbd5e1;
             --surface: #ffffff;
             --bg: #f8fafc;
-            --accent: #7c2d12;
+            --accent: #0f172a;
         }
 
         * { box-sizing: border-box; }
@@ -83,9 +83,9 @@
         }
 
         .badge {
-            border: 1px solid #fdba74;
-            color: #9a3412;
-            background: #fff7ed;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            background: #f8fafc;
             border-radius: 999px;
             padding: 6px 10px;
             font-size: 12px;
@@ -121,12 +121,12 @@
 
         .foot {
             margin: 0 22px 22px;
-            border: 1px dashed #ffdfbe;
+            border: 1px dashed #cbd5e1;
             border-radius: 10px;
             padding: 12px;
             font-size: 12px;
-            color: #9a3412;
-            background: #fff7ed;
+            color: #334155;
+            background: #f8fafc;
         }
 
         @media (max-width: 720px) {
@@ -149,6 +149,58 @@
 </head>
 <body>
     <div class="wrap">
+        @if (session('status'))
+            <div style="margin-bottom: 12px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; padding: 10px 12px; border-radius: 8px; font-size: 13px;">
+                {{ session('status') }}
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div style="margin-bottom: 12px; border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b; padding: 10px 12px; border-radius: 8px; font-size: 13px;">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
+        <section class="card" style="margin-bottom: 12px;">
+            <header class="header" style="padding-bottom: 14px;">
+                <div>
+                    <h2 class="title" style="font-size: 18px;">Enviar recordatorio por correo</h2>
+                    <div class="meta">Se adjuntara automaticamente el voucher en PDF.</div>
+                </div>
+            </header>
+            <form method="POST" action="{{ route('comprobantes.suscripciones.recordatorio.send', $subscription) }}" style="padding: 0 22px 22px;">
+                @csrf
+                <div class="grid" style="padding: 0;">
+                    <div class="item">
+                        <div class="label">Nombre destinatario (opcional)</div>
+                        <input
+                            type="text"
+                            name="recipient_name"
+                            value="{{ old('recipient_name', $subscription->billing_contact_name) }}"
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-size: 14px;"
+                            placeholder="Nombre del contacto"
+                        >
+                    </div>
+
+                    <div class="item">
+                        <div class="label">Correo destinatario</div>
+                        <input
+                            type="email"
+                            name="recipient_email"
+                            value="{{ old('recipient_email', $subscription->billing_contact_email) }}"
+                            style="width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-size: 14px;"
+                            placeholder="correo@empresa.com"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+                    <button type="submit" class="btn btn-primary">Enviar recordatorio por correo</button>
+                </div>
+            </form>
+        </section>
+
         <div class="toolbar">
             <a href="{{ route('suscripciones.index') }}" class="btn">Volver a suscripciones</a>
             <div style="display: flex; gap: 8px;">
@@ -193,6 +245,11 @@
                 </div>
 
                 <div class="item">
+                    <div class="label">Ultimo dia de pago</div>
+                    <div class="value">{{ $lastPaymentDate?->format('Y-m-d') ?: '-' }}</div>
+                </div>
+
+                <div class="item">
                     <div class="label">Estado</div>
                     <div class="value">
                         @if (is_null($daysUntilRenewal))
@@ -209,7 +266,7 @@
             </div>
 
             <div class="foot">
-                Este documento es un recordatorio de pago. Cuando el pago sea confirmado, se emitira el comprobante final.
+                Este documento es un recordatorio de pago. No incluye enlaces de pago. Para gestionar el pago, comunicarte con Christian Arevalo.
             </div>
         </section>
     </div>
