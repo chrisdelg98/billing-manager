@@ -174,6 +174,68 @@ class PaymentVoucherController extends Controller
             ->with('status', 'Recordatorio enviado por correo.');
     }
 
+    public function welcome(Subscription $subscription): View
+    {
+        $subscription->loadMissing('service:id,name');
+
+        $voucherNumber = sprintf('BNV-%06d', (int) $subscription->id);
+        $daysUntilRenewal = $subscription->daysUntilRenewal();
+        $lastPaymentDate = $subscription->next_renewal_at?->copy()->endOfMonth();
+
+        return view('vouchers.subscription-welcome', compact('subscription', 'voucherNumber', 'daysUntilRenewal', 'lastPaymentDate'));
+    }
+
+    public function sendWelcomeEmail(Request $request, Subscription $subscription): RedirectResponse
+    {
+        $data = $request->validate([
+            'recipient_name' => ['nullable', 'string', 'max:120'],
+            'recipient_email' => ['required', 'email', 'max:190'],
+        ]);
+
+        $subscription->loadMissing('service:id,name');
+
+        $voucherNumber = sprintf('BNV-%06d', (int) $subscription->id);
+        $daysUntilRenewal = $subscription->daysUntilRenewal();
+        $lastPaymentDate = $subscription->next_renewal_at?->copy()->endOfMonth();
+
+        $recipientEmail = (string) $data['recipient_email'];
+        $recipientName = trim((string) ($data['recipient_name'] ?? ''));
+        if ($recipientName === '') {
+            $recipientName = (string) ($subscription->billing_contact_name ?? '');
+        }
+
+        $subject = "Bienvenido a tu suscripcion - {$subscription->name}";
+
+        try {
+            Mail::send([], [], function ($message) use ($recipientEmail, $recipientName, $subject, $subscription, $voucherNumber, $daysUntilRenewal, $lastPaymentDate): void {
+                if ($recipientName !== '') {
+                    $message->to($recipientEmail, $recipientName);
+                } else {
+                    $message->to($recipientEmail);
+                }
+
+                $message->subject($subject);
+                $message->html(view('emails.subscription-welcome', compact(
+                    'subscription',
+                    'voucherNumber',
+                    'daysUntilRenewal',
+                    'lastPaymentDate',
+                    'recipientName'
+                ))->render());
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('comprobantes.suscripciones.bienvenida', $subscription)
+                ->with('status', 'No se pudo enviar el correo; revisa la configuracion SMTP.');
+        }
+
+        return redirect()
+            ->route('comprobantes.suscripciones.bienvenida', $subscription)
+            ->with('status', 'Correo de bienvenida enviado correctamente.');
+    }
+
     private function buildReminderVoucherPdf(Subscription $subscription, string $voucherNumber, ?int $daysUntilRenewal, $lastPaymentDate): string
     {
         $html = view('vouchers.pdf.payment-reminder', compact('subscription', 'voucherNumber', 'daysUntilRenewal', 'lastPaymentDate'))->render();

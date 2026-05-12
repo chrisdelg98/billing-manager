@@ -94,6 +94,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/comprobantes/suscripciones/{subscription}/recordatorio/enviar', [PaymentVoucherController::class, 'sendReminderEmail'])
         ->name('comprobantes.suscripciones.recordatorio.send');
 
+    Route::get('/comprobantes/suscripciones/{subscription}/bienvenida', [PaymentVoucherController::class, 'welcome'])
+        ->name('comprobantes.suscripciones.bienvenida');
+
+    Route::post('/comprobantes/suscripciones/{subscription}/bienvenida/enviar', [PaymentVoucherController::class, 'sendWelcomeEmail'])
+        ->name('comprobantes.suscripciones.bienvenida.send');
+
     Route::resource('costos', CostItemController::class)
         ->parameters(['costos' => 'costItem'])
         ->except(['show']);

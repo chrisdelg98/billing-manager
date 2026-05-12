@@ -49,7 +49,7 @@ class EmailTestController extends Controller
         $this->authorizeAdmin();
 
         $data = $request->validate([
-            'template' => ['required', 'string', 'in:orden_pago,comprobante_pago,recordatorio'],
+            'template' => ['required', 'string', 'in:orden_pago,comprobante_pago,recordatorio,bienvenida'],
             'payment_id' => ['nullable', 'integer', 'exists:payments,id'],
             'subscription_id' => ['nullable', 'integer', 'exists:subscriptions,id'],
         ]);
@@ -115,6 +115,31 @@ class EmailTestController extends Controller
                     });
 
                     $label = 'recordatorio de pago';
+                    break;
+
+                case 'bienvenida':
+                    $subscription = Subscription::query()
+                        ->with('service:id,name')
+                        ->findOrFail((int) ($data['subscription_id'] ?? 0));
+
+                    $voucherNumber = sprintf('BNV-%06d', (int) $subscription->id);
+                    $daysUntilRenewal = $subscription->daysUntilRenewal();
+                    $lastPaymentDate = $subscription->next_renewal_at?->copy()->endOfMonth();
+                    $subject = "[PRUEBA] Bienvenido a tu suscripcion - {$subscription->name}";
+
+                    Mail::send([], [], function ($message) use ($recipientEmail, $recipientName, $subject, $subscription, $voucherNumber, $daysUntilRenewal, $lastPaymentDate): void {
+                        $message->to($recipientEmail, $recipientName !== '' ? $recipientName : null);
+                        $message->subject($subject);
+                        $message->html(view('emails.subscription-welcome', [
+                            'subscription' => $subscription,
+                            'voucherNumber' => $voucherNumber,
+                            'daysUntilRenewal' => $daysUntilRenewal,
+                            'lastPaymentDate' => $lastPaymentDate,
+                            'recipientName' => $recipientName,
+                        ])->render());
+                    });
+
+                    $label = 'bienvenida';
                     break;
 
                 default:

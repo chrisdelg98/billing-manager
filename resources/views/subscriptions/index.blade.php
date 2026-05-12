@@ -221,6 +221,14 @@
                                                 >
                                                     <div class="space-y-1 text-left">
                                                         <a
+                                                            href="{{ route('comprobantes.suscripciones.bienvenida', $subscription) }}"
+                                                            class="block rounded-lg border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-50"
+                                                            @click="closeMenu()"
+                                                        >
+                                                            Bienvenida
+                                                        </a>
+
+                                                        <a
                                                             href="{{ route('comprobantes.suscripciones.recordatorio', $subscription) }}"
                                                             class="block rounded-lg border border-blue-300 px-3 py-2 text-xs font-medium text-blue-700 transition hover:bg-blue-50"
                                                             @click="closeMenu()"

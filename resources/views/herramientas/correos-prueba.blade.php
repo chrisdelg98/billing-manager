@@ -21,6 +21,7 @@
                 payment_id: '{{ optional($pendingPayments->first())->id }}',
                 paid_payment_id: '{{ optional($paidPayments->first())->id }}',
                 subscription_id: '{{ optional($subscriptions->first())->id }}',
+                welcome_subscription_id: '{{ optional($subscriptions->first())->id }}',
              }">
             <form method="POST" action="{{ route('herramientas.correos-prueba.send') }}" class="space-y-5">
                 @csrf
@@ -47,6 +48,13 @@
                             <span>
                                 <span class="block font-semibold text-slate-900">Recordatorio</span>
                                 <span class="block text-xs text-slate-500">Aviso de renovacion proxima/vencida.</span>
+                            </span>
+                        </label>
+                        <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm transition hover:border-slate-400" :class="template === 'bienvenida' ? 'border-slate-900 bg-white ring-2 ring-slate-900/10' : ''">
+                            <input type="radio" name="template" value="bienvenida" x-model="template" class="mt-1">
+                            <span>
+                                <span class="block font-semibold text-slate-900">Bienvenida</span>
+                                <span class="block text-xs text-slate-500">Cuenta activa, detalles de suscripcion.</span>
                             </span>
                         </label>
                     </div>
@@ -86,6 +94,19 @@
                         <select name="subscription_id" x-model="subscription_id" :disabled="template !== 'recordatorio'" class="mt-2 w-full rounded-lg border-slate-300 text-sm focus:border-slate-900 focus:ring-slate-900">
                             @foreach ($subscriptions as $s)
                                 <option value="{{ $s->id }}">RMD-{{ sprintf('%06d', $s->id) }} · {{ $s->service?->name ?: 'N/A' }} · {{ $s->name }} · {{ ucfirst((string) $s->billing_cycle) }} · vence {{ $s->next_renewal_at?->format('Y-m-d') ?: '-' }}</option>
+                            @endforeach
+                        </select>
+                    @endif
+                </div>
+
+                <div x-show="template === 'bienvenida'" x-cloak>
+                    <label class="block text-xs font-medium uppercase tracking-[0.12em] text-slate-500">Suscripcion</label>
+                    @if ($subscriptions->isEmpty())
+                        <p class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">No hay suscripciones registradas.</p>
+                    @else
+                        <select name="subscription_id" x-model="welcome_subscription_id" :disabled="template !== 'bienvenida'" class="mt-2 w-full rounded-lg border-slate-300 text-sm focus:border-slate-900 focus:ring-slate-900">
+                            @foreach ($subscriptions as $s)
+                                <option value="{{ $s->id }}">BNV-{{ sprintf('%06d', $s->id) }} · {{ $s->service?->name ?: 'N/A' }} · {{ $s->name }} · {{ ucfirst((string) $s->billing_cycle) }}</option>
                             @endforeach
                         </select>
                     @endif
