@@ -171,13 +171,20 @@ class LicenseStatusController extends Controller
             ];
         }
 
-        if ($subscription->next_renewal_at->copy()->startOfDay()->lt($today)) {
+        // En modo postpago el acceso se mantiene hasta next_renewal_at + meses de gracia,
+        // para que el cliente pueda pagar durante el mes en curso y no solo por adelantado.
+        $accessDeadline = $subscription->accessDeadline();
+        $accessDaysRemaining = $accessDeadline
+            ? $today->diffInDays($accessDeadline, false)
+            : $renewalDaysRemaining;
+
+        if ($accessDeadline && $accessDeadline->lt($today)) {
             return [
                 'status' => 'overdue',
                 'can_access' => false,
                 'reason_code' => 'renewal_overdue',
                 'days_remaining' => 0,
-                'expires_on' => $subscription->next_renewal_at->toDateString(),
+                'expires_on' => $accessDeadline->toDateString(),
                 'trial_days_remaining' => $trialDaysRemaining,
                 'renewal_days_remaining' => $renewalDaysRemaining,
             ];
@@ -187,8 +194,8 @@ class LicenseStatusController extends Controller
             'status' => 'active',
             'can_access' => true,
             'reason_code' => 'paid_current',
-            'days_remaining' => max(0, (int) ($renewalDaysRemaining ?? 0)),
-            'expires_on' => $subscription->next_renewal_at->toDateString(),
+            'days_remaining' => max(0, (int) ($accessDaysRemaining ?? 0)),
+            'expires_on' => $accessDeadline?->toDateString() ?? $subscription->next_renewal_at->toDateString(),
             'trial_days_remaining' => $trialDaysRemaining,
             'renewal_days_remaining' => $renewalDaysRemaining,
         ];

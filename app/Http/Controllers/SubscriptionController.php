@@ -224,6 +224,8 @@ class SubscriptionController extends Controller
                     ->where('is_active', true)),
             ],
             'next_renewal_at' => ['nullable', 'date'],
+            'grace_period_enabled' => ['nullable', 'boolean'],
+            'grace_months' => ['nullable', 'integer', 'min:1', 'max:12'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'billing_contact_name' => ['nullable', 'string', 'max:120'],
             'billing_contact_email' => ['nullable', 'email', 'max:190'],
@@ -273,6 +275,11 @@ class SubscriptionController extends Controller
 
         $data['is_active'] = (bool) ($data['is_active'] ?? false);
         $data['license_api_enabled'] = (bool) ($data['license_api_enabled'] ?? false);
+
+        $data['grace_period_enabled'] = (bool) ($data['grace_period_enabled'] ?? false);
+        $data['grace_months'] = $data['grace_period_enabled']
+            ? max(1, (int) ($data['grace_months'] ?? 1))
+            : 1;
 
         return $data;
     }

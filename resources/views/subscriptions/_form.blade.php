@@ -228,6 +228,41 @@
         </div>
 
         <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+            @php($gracePeriodEnabled = (bool) old('grace_period_enabled', $subscription->grace_period_enabled ?? false))
+            @php($graceMonths = (int) old('grace_months', $subscription->grace_months ?? 1))
+            <div x-data="{ graceEnabled: @js($gracePeriodEnabled) }">
+                <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <input
+                        type="checkbox"
+                        name="grace_period_enabled"
+                        value="1"
+                        x-model="graceEnabled"
+                        class="rounded border-slate-300 text-slate-900 focus:ring-slate-300"
+                    >
+                    Modo postpago (periodo de gracia)
+                </label>
+                <p class="mt-1 text-xs text-slate-500">Si esta activo, el acceso por API se mantiene durante los meses de gracia despues de la fecha de renovacion, para poder pagar durante el mes y no solo por adelantado.</p>
+
+                <div class="mt-3" x-show="graceEnabled" x-cloak>
+                    <label for="grace_months" class="mb-1 block text-sm font-medium text-slate-700">Meses de gracia</label>
+                    <input
+                        id="grace_months"
+                        name="grace_months"
+                        type="number"
+                        min="1"
+                        max="12"
+                        step="1"
+                        value="{{ $graceMonths > 0 ? $graceMonths : 1 }}"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-200"
+                    >
+                    <p class="mt-1 text-xs text-slate-500">Ejemplo: 1 = un mes extra de acceso tras la renovacion. Aplica igual para suscripciones anuales (solo el o los meses indicados, no un año).</p>
+                </div>
+            </div>
+            @error('grace_months')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+            @error('grace_period_enabled')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
+        </div>
+
+        <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
             @php($licenseApiEnabled = (bool) old('license_api_enabled', $subscription->license_api_enabled ?? false))
             <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
                 <input type="checkbox" name="license_api_enabled" value="1" @checked($licenseApiEnabled) class="rounded border-slate-300 text-slate-900 focus:ring-slate-300">

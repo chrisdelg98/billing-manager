@@ -167,13 +167,14 @@ class PaymentController extends Controller
 
     public function update(Request $request, Payment $payment): RedirectResponse
     {
-        $previousStatus = (string) $payment->status;
         $data = $this->validatedData($request);
         $delivery = $this->validatedDeliveryData($request);
         $data = array_merge($data, $this->recipientPayload($delivery));
         $payment->update($data);
 
-        if ($previousStatus !== Payment::STATUS_CONFIRMED && (string) $payment->status === Payment::STATUS_CONFIRMED) {
+        // Recalcula en cada guardado de un pago confirmado. advanceSubscriptionRenewal solo
+        // avanza hacia adelante, asi que volver a guardar un pago ya confirmado es idempotente.
+        if ((string) $payment->status === Payment::STATUS_CONFIRMED) {
             $this->advanceSubscriptionRenewal($payment->fresh());
         }
 
@@ -477,9 +478,18 @@ class PaymentController extends Controller
                 : $nextRenewal->addMonthNoOverflow();
         }
 
-        $subscription->update([
+        $updates = [
             'next_renewal_at' => $nextRenewal->toDateString(),
-        ]);
+        ];
+
+        // Un pago confirmado termina el periodo de prueba: de aqui en adelante rige la
+        // facturacion, para que la renovacion avanzada no quede pisada por la fecha de prueba.
+        if ($subscription->has_trial) {
+            $updates['has_trial'] = false;
+            $updates['trial_ends_at'] = null;
+        }
+
+        $subscription->update($updates);
     }
 
     private function activeCurrencyOptions(): Collection

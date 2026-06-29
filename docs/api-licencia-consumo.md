@@ -60,6 +60,7 @@ Campos principales:
 Nota de negocio:
 
 - Si hay periodo de prueba y no se define una renovacion manual, la renovacion se fija en la misma fecha de fin de prueba (sin dias extra de gracia).
+- Modo postpago (periodo de gracia): si la suscripcion lo tiene activo, el acceso se mantiene durante N meses despues de next_renewal_at. En ese caso `can_access` sigue en true y `expires_on` / `days_remaining` reflejan la fecha limite extendida (next_renewal_at + meses de gracia), no la fecha de renovacion. Permite pagar durante el mes en curso sin bloquear la plataforma externa. Para suscripciones anuales la gracia tambien es de los meses configurados (no un año).
 
 ## 6) Estados funcionales
 

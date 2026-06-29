@@ -16,6 +16,8 @@ class Subscription extends Model
         'amount',
         'currency',
         'next_renewal_at',
+        'grace_period_enabled',
+        'grace_months',
         'notes',
         'billing_contact_name',
         'billing_contact_email',
@@ -38,6 +40,8 @@ class Subscription extends Model
         return [
             'amount' => 'decimal:2',
             'next_renewal_at' => 'date',
+            'grace_period_enabled' => 'boolean',
+            'grace_months' => 'integer',
             'has_trial' => 'boolean',
             'trial_ends_at' => 'date',
             'is_active' => 'boolean',
@@ -51,6 +55,26 @@ class Subscription extends Model
     public function hasLicenseCredentials(): bool
     {
         return ! empty($this->license_code) && ! empty($this->license_secret_hash);
+    }
+
+    /**
+     * Fecha hasta la que se mantiene el acceso. En modo postpago suma los meses
+     * de gracia a next_renewal_at, dando una ventana para pagar durante el mes
+     * sin que la plataforma externa quede bloqueada el dia mismo de la renovacion.
+     */
+    public function accessDeadline(): ?CarbonInterface
+    {
+        if (! $this->next_renewal_at) {
+            return null;
+        }
+
+        $deadline = $this->next_renewal_at->copy()->startOfDay();
+
+        if ($this->grace_period_enabled && (int) $this->grace_months > 0) {
+            $deadline = $deadline->addMonthsNoOverflow((int) $this->grace_months);
+        }
+
+        return $deadline;
     }
 
     public function daysUntilRenewal(?CarbonInterface $onDate = null): ?int
